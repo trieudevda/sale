@@ -1,0 +1,9 @@
+
+Log::emergency($message); // Hệ thống ngưng trệ
+Log::alert($message);     // Cần xử lý ngay lập tức
+Log::critical($message);  // Lỗi nghiêm trọng
+Log::error($message);     // Lỗi (Thường dùng trong try-catch)
+Log::warning($message);   // Cảnh báo
+Log::notice($message);    // Thông báo bình thường
+Log::info($message);      // Thông tin luồng chạy
+Log::debug($message);     // Thông tin để debug

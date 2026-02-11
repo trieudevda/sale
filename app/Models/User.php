@@ -18,10 +18,19 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'id',
         'name',
         'email',
         'password',
+        'full_name',
+        'avatar',
+        'nickname',
+        'address',
+        'phone',
+        'signin_type',
+        'email_verified_at','password','role','remember_token','status','last_login_at','created_at','updated_at'
     ];
+            
 
     /**
      * The attributes that should be hidden for serialization.
@@ -41,6 +50,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'status' => \App\Enum\User\UserStatus::class,
+            'role' => \App\Enum\User\UserRole::class,
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
