@@ -12,6 +12,7 @@ import { Color } from '@tiptap/extension-color';
 import { Bold } from '@tiptap/extension-bold';           // Thêm { }
 
 
+
 window.addEventListener('load', function() {
     if (document.getElementById("wysiwyg-example")) {
 
@@ -90,11 +91,18 @@ window.addEventListener('load', function() {
         const html = editor.getHTML();
         document.getElementById('formdata-WYSIWYG').value = html;
     });
-document.getElementById('saveButton').addEventListener('submit', () => {
-    const html = editor.getHTML();
-    document.getElementById('formdata-WYSIWYG').value = html;
-    console.log('Saved content:', html);
-});
+    // Lấy dữ liệu từ input
+    const dataFromServer = document.getElementById('formdata-WYSIWYG').value;
+    console.log(dataFromServer)
+    // Gán vào editor
+    if (dataFromServer) {
+        editor.commands.setContent(dataFromServer); //
+    }
+    document.getElementById('saveButton').addEventListener('submit', () => {
+        const html = editor.getHTML();
+        document.getElementById('formdata-WYSIWYG').value = html;
+        console.log('Saved content:', html);
+    });
 
     // set up custom event listeners for the buttons
     document.getElementById('toggleBoldButton').addEventListener('click', () => editor.chain().focus().toggleBold().run());
@@ -105,7 +113,7 @@ document.getElementById('saveButton').addEventListener('submit', () => {
     const isHighlighted = editor.isActive('highlight');
     // when using toggleHighlight(), judge if is is already highlighted.
     editor.chain().focus().toggleHighlight({
-        color: isHighlighted ? undefined : '#ffc078' 
+        color: isHighlighted ? undefined : '#ffc078'
     }).run();
     });
 
@@ -165,7 +173,7 @@ document.getElementById('saveButton').addEventListener('submit', () => {
         editor.chain().focus().setParagraph().run();
         typographyDropdown.hide();
     });
-    
+
     document.querySelectorAll('[data-heading-level]').forEach((button) => {
         button.addEventListener('click', () => {
             const level = button.getAttribute('data-heading-level');

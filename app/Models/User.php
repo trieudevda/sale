@@ -6,7 +6,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -30,7 +29,7 @@ class User extends Authenticatable
         'signin_type',
         'email_verified_at','password','role','remember_token','status','last_login_at','created_at','updated_at'
     ];
-            
+
 
     /**
      * The attributes that should be hidden for serialization.

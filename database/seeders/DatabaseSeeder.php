@@ -23,9 +23,9 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'admin@a.a',
         //     'password'=> 'a',
         // ]);
-        Category::create([
-            'name' => 'Danh mục 1',
-            'slug' => 'danh-muc-1',
-        ]);
+//        Category::create([
+//            'name' => 'Danh mục 1',
+//            'slug' => 'danh-muc-1',
+//        ]);
     }
 }

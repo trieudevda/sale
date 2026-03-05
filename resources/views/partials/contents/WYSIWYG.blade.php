@@ -1,4 +1,4 @@
-<textarea name="content" id="formdata-WYSIWYG" class="hidden"></textarea>
+<textarea name="contents" id="formdata-WYSIWYG" class="hidden" value=""></textarea>
 <div class="w-full bg-neutral-secondary-medium border border-default-medium rounded-base">
     <div class="p-2 border-b border-default-medium">
         <div class="flex flex-wrap items-center">
@@ -573,14 +573,14 @@
     </div>
     <div class="px-4 py-2 bg-neutral-primary rounded-b-lg">
         <label for="wysiwyg-example" class="sr-only">Publish post</label>
-        <div id="wysiwyg-example" class="block w-full px-0 text-sm text-body bg-neutral-primary border-0 focus:ring-0">
+        <div id="wysiwyg-example" class="block w-full min-h-64 px-0 text-sm text-body bg-neutral-primary border-0 focus:ring-0">
         </div>
     </div>
 </div>
 <script type="importmap">
     {
         "imports": {
-            "https://esm.sh/v135/prosemirror-model@1.22.3/es2022/prosemirror-model.mjs": "https://esm.sh/v135/prosemirror-model@1.19.3/es2022/prosemirror-model.mjs", 
+            "https://esm.sh/v135/prosemirror-model@1.22.3/es2022/prosemirror-model.mjs": "https://esm.sh/v135/prosemirror-model@1.19.3/es2022/prosemirror-model.mjs",
             "https://esm.sh/v135/prosemirror-model@1.22.1/es2022/prosemirror-model.mjs": "https://esm.sh/v135/prosemirror-model@1.19.3/es2022/prosemirror-model.mjs"
         }
     }

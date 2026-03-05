@@ -8,6 +8,10 @@ class Category extends Model
 {
     protected $fillable = ['id','name','slug','parent_id','status','created_at','updated_at'];
 
+    public function scopeActive($query)
+    {
+        return $query->where('status', \App\Enum\Category\CategoryStatus::ACTIVE);
+    }
     public function parent()
     {
         return $this->belongsTo(Category::class, 'parent_id');

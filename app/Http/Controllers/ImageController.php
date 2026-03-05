@@ -16,7 +16,6 @@ class ImageController extends Controller
         $request->validate([
             'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:20480',
         ]);
-        $path = '';
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             $folderPath = date('Y/m/d');

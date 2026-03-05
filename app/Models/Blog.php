@@ -12,10 +12,10 @@ class Blog extends Model
     // {
     //     return $this->belongsTo(\App\Models\Category::class, 'category_id');
     // }
-protected $casts = [
-    'status' => \App\Enum\Blog\LangBlogStatus::class,
-];
-    public function cateChildren()
+    protected $casts = [
+        'status' => \App\Enum\Blog\LangBlogStatus::class,
+    ];
+    public function CateChildren()
     {
         return $this->belongsTo(\App\Models\Category::class, 'category_id');
     }
