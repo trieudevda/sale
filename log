@@ -7,3 +7,41 @@ Log::warning($message);   // Cảnh báo
 Log::notice($message);    // Thông báo bình thường
 Log::info($message);      // Thông tin luồng chạy
 Log::debug($message);     // Thông tin để debug
+
+1. Nhóm Sản phẩm (Catalog) - Linh hồn của hệ thống
+
+    categories: Danh mục sản phẩm (ID, tên, slug, parent_id cho đa cấp).
+    products: Thông tin chung (Tên, slug, mô tả, SKU gốc).
+    product_variants: Quan trọng. Lưu các biến thể như (iPhone 15 - Màu Đỏ - 128GB). Lưu giá, kho hàng (stock) riêng cho từng bản.
+    product_images: Lưu nhiều ảnh cho sản phẩm hoặc ảnh riêng cho từng biến thể.
+    attributes & attribute_values: Lưu thuộc tính (Màu sắc, Kích thước) và giá trị (Đỏ, Xanh, S, M).
+
+2. Nhóm Người dùng & Phân quyền (Users)
+
+    users: Thông tin đăng nhập (Email, pass, phone).
+    roles & permissions: Phân quyền (Admin, Biên tập viên, Khách hàng).
+    user_addresses: Sổ địa chỉ (Một user có nhiều địa chỉ nhận hàng: Nhà riêng, Công ty).
+
+3. Nhóm Đơn hàng (Orders) - Cần sự chính xác tuyệt đối
+
+    orders: Thông tin tổng quát (Mã đơn, ID người dùng, tổng tiền, phí ship, trạng thái: chờ duyệt, đang giao, hoàn thành, hủy).
+    order_items: Chi tiết từng món trong đơn.
+        Lưu ý: Phải có cột price_at_purchase (giá lúc mua) vì giá sản phẩm sau này có thể thay đổi.
+    order_status_histories: Nhật ký thay đổi trạng thái (Ai đổi, đổi lúc nào) để đối soát.
+
+4. Nhóm Giỏ hàng & Khuyến mãi (Marketing)
+
+    carts: Lưu giỏ hàng (nếu bạn muốn đồng bộ giỏ hàng trên nhiều thiết bị thay vì chỉ lưu Cookie).
+    coupons: Mã giảm giá (Code, loại: % hoặc tiền mặt, ngày hết hạn, số lần dùng).
+    wishlists: Sản phẩm yêu thích.
+
+5. Nhóm Đánh giá & Phản hồi (Feedback)
+
+    reviews: Đánh giá sản phẩm (Rating 1-5 sao, nội dung, ảnh đính kèm).
+    comments: Bình luận hỏi đáp về sản phẩm.
+
+6. Nhóm Cấu hình & Vận chuyển (System)
+
+    settings: Lưu cấu hình website (Logo, Hotline, Email, Banner).
+    shipping_methods: Các đơn vị vận chuyển (GHTK, GHN, Viettel Post) và phí ship.
+    payment_methods: Phương thức thanh toán (COD, Chuyển khoản, VNPay, Momo).

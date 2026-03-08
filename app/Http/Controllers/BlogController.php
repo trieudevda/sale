@@ -17,7 +17,7 @@ class BlogController extends Controller
 
     public function index(Request $request)
     {
-        $paginate = $request->get('paginate',15);
+        $paginate = $request->get('paginate',config('constants.pagination.limit'));
         $status = $request->get('status',BlogStatus::PUBLIC);
         $sort = $request->get('sort','desc');
         $user = Auth::user();
@@ -72,7 +72,7 @@ class BlogController extends Controller
     {
         $user = Auth::user();
         if ($user && $user->role === \App\Enum\User\UserRole::ADMIN) {
-            if ($request->isMethod('post')) {
+            if ($request->isMethod('post')) {dd($request->all());
                 $blog = Blog::findOrFail($id); //404
                 DB::beginTransaction();
                 try {
@@ -121,7 +121,7 @@ class BlogController extends Controller
     }
     public function search(Request $request)
     {
-        $paginate = 10;
+        $paginate = $request->get('paginate',config('constants.pagination.limit'));
         $name = $request->get('name','');
         $user = Auth::user();
         if ($user && $user->role === \App\Enum\User\UserRole::ADMIN) {

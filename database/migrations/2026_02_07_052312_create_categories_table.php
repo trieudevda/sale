@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->foreignId('avatar_image_id')->nullable()->constrained('images');
             // $table->unsignedInteger('parent_id')->nullable();
             $table->foreignId('parent_id')
                 ->nullable()

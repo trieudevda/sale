@@ -1,4 +1,5 @@
 <textarea name="contents" id="formdata-WYSIWYG" class="hidden" value=""></textarea>
+{{--<div id="tiptap-editor" class="p-4 min-h-[300px] bg-white text-heading focus:outline-none"></div>--}}
 <div class="w-full bg-neutral-secondary-medium border border-default-medium rounded-base">
     <div class="p-2 border-b border-default-medium">
         <div class="flex flex-wrap items-center">
@@ -484,15 +485,33 @@
                     </li>
                 </ul>
             </div>
-            <button id="addImageButton" type="button" data-tooltip-target="tooltip-image"
-                class="p-1.5 text-body rounded-sm cursor-pointer hover:text-heading hover:bg-neutral-quaternary">
-                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z" />
+            <!-- Nút thêm ảnh -->
+            <button id="addImageButton" type="button"
+                    class="p-2 text-gray-500 rounded cursor-pointer hover:text-blue-600 hover:bg-gray-100 transition-all">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z" />
                 </svg>
-                <span class="sr-only">Add image</span>
+                <span class="sr-only">Thêm ảnh</span>
             </button>
+
+            <!-- Input ẩn để lưu URL (nếu cần dùng cho form) -->
+            <input type="hidden" id="lfm_image_bridge">
+            <!-- Modal Background -->
+            <div id="lfmModal" class="fixed inset-0 z-[9999] hidden bg-black/60 flex items-center justify-center p-4 overflow-hidden" style="display: none;">
+                <!-- Modal Content -->
+                <div class="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
+                        <h3 class="text-lg font-bold text-gray-800">Thư viện hình ảnh</h3>
+                        <button type="button" id="closeLfmModal" class="text-gray-400 hover:text-red-500 text-3xl leading-none">&times;</button>
+                    </div>
+                    <!-- Body: Nơi chứa Iframe -->
+                    <div class="flex-1 bg-white relative">
+                        <iframe id="lfmIframe" src="" class="w-full h-full border-none absolute inset-0"></iframe>
+                    </div>
+                </div>
+            </div>
             <div id="tooltip-image" role="tooltip"
                 class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-dark-strong rounded-base shadow-xs opacity-0 tooltip">
                 Add image

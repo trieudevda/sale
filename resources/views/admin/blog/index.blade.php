@@ -142,40 +142,20 @@
         @endforeach
       </tbody>
     </table>
-    <nav class="flex items-center flex-column flex-wrap md:flex-row justify-between p-4" aria-label="Table navigation">
-      <span class="text-sm font-normal text-body mb-4 md:mb-0 block w-full md:inline md:w-auto">{{__('admin.showing')}}&nbsp;<span
-          class="font-semibold text-heading">1-10</span> {{__('admin.of')}} <span class="font-semibold text-heading">1000</span></span>
-      <ul class="flex -space-x-px text-sm">
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium rounded-s-base text-sm px-3 h-9 focus:outline-none">{{__('admin.previous')}}</a>
-        </li>
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">1</a>
-        </li>
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">2</a>
-        </li>
-        <li>
-          <a href="#" aria-current="page"
-            class="flex items-center justify-center text-fg-brand bg-brand-softer box-border border border-default-medium hover:bg-brand-soft hover:text-fg-brand font-medium text-sm w-9 h-9 focus:outline-none">3</a>
-        </li>
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">...</a>
-        </li>
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">5</a>
-        </li>
-        <li>
-          <a href="#"
-            class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium rounded-e-base text-sm px-3 h-9 focus:outline-none">{{__('admin.next')}}</a>
-        </li>
-      </ul>
-    </nav>
+      @if ($listBlog->lastPage() > 1)
+          <nav class="custom-paginate flex items-center flex-column flex-wrap md:flex-row justify-between p-4" aria-label="Table navigation">
+              <div class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+                  <div class="flex-1 flex justify-between sm:hidden">
+                      {!! $listBlog->links('pagination::simple-tailwind') !!}
+                  </div>
+                  <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                      <div>
+                          {!! $listBlog->links() !!}
+                      </div>
+                  </div>
+              </div>
+          </nav>
+      @endif
   </div>
 
 @endsection

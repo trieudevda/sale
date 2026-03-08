@@ -17,7 +17,7 @@
          </li>
          <li>
             <button type="button" class="flex items-center w-full justify-between px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group" aria-controls="dropdown-blog" data-collapse-toggle="dropdown-blog">
-                  <svg class="shrink-0 w-5 h-5 transition duration-75 group-hover:text-fg-brand" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4h1.5L9 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-8.5-3h9.25L19 7H7.312"/></svg>
+                <img src="/image/svg/blog.svg" width="20" height="20" alt="{{__('admin.blog')}}"/>
                   <span class="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">{{__('admin.blog',['action' => __('admin.manager')])}}</span>
                   <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
             </button>
@@ -32,22 +32,37 @@
          </li>
          <li>
             <button type="button" class="flex items-center w-full justify-between px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group" aria-controls="dropdown-category" data-collapse-toggle="dropdown-category">
-                  <svg class="shrink-0 w-5 h-5 transition duration-75 group-hover:text-fg-brand" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4h1.5L9 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-8.5-3h9.25L19 7H7.312"/></svg>
-                  <span class="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">{{__('admin.category',['action' => __('admin.manager')])}}</span>
+                <img src="/image/svg/category.svg" width="20" height="20" alt="{{__('admin.category')}}"/>
+                  <span class="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">{{__('admin.category_start',['action' => __('admin.manager')])}}</span>
                   <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
             </button>
             <ul id="dropdown-category" class="hidden py-2 space-y-2">
                   <li>
-                     <a href="{{ route('admin.category.index') }}" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.category',['action' => __('admin.list')])}}</a>
+                     <a href="{{ route('admin.category.index') }}" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.category_start',['action' => __('admin.list')])}}</a>
                   </li>
                   <li>
-                     <a href="{{ route('admin.blog.create') }}" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.category',['action' => __('admin.add')])}}</a>
+                     <a href="{{ route('admin.category.create') }}" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.category_start',['action' => __('admin.add')])}}</a>
                   </li>
             </ul>
          </li>
          <li>
+            <button type="button" class="flex items-center w-full justify-between px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group" aria-controls="dropdown-product" data-collapse-toggle="dropdown-product">
+                <img src="/image/svg/product.svg" width="20" height="20" alt="{{__('admin.product')}}"/>
+                  <span class="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">{{__('admin.product_start',['action' => __('admin.manager')])}}</span>
+                  <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
+            </button>
+            <ul id="dropdown-product" class="hidden py-2 space-y-2">
+              <li>
+                 <a href="" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.product_start',['action' => __('admin.list')])}}</a>
+              </li>
+              <li>
+                 <a href="" class="pl-10 flex items-center px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group">{{__('admin.product_start',['action' => __('admin.add')])}}</a>
+              </li>
+            </ul>
+         </li>
+         <li>
             <button type="button" class="flex items-center w-full justify-between px-2 py-1.5 text-body rounded-base hover:bg-neutral-tertiary hover:text-fg-brand group" aria-controls="dropdown-example" data-collapse-toggle="dropdown-example">
-                  <svg class="shrink-0 w-5 h-5 transition duration-75 group-hover:text-fg-brand" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4h1.5L9 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-8.5-3h9.25L19 7H7.312"/></svg>
+                <img src="/image/svg/product.svg" width="20" height="20" alt="{{__('admin.product')}}"/>
                   <span class="flex-1 ms-3 text-left rtl:text-right whitespace-nowrap">E-commerce</span>
                   <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
             </button>

@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AuthMiddleware::class,
         ]);
+//        $middleware->validateCsrfTokens(except: [
+//            'filemanager/*',
+//        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

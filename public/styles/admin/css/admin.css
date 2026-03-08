@@ -1,0 +1,9 @@
+.custom-paginate{
+    justify-content: center;
+}
+.custom-paginate nav >div >div:first-child{
+    display: none;
+}
+/*.custom-paginate >div {*/
+/*    width: 100%;*/
+/*}*/

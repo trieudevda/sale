@@ -9,7 +9,7 @@
 @section('content')
     <div class="flex items-center gap-3">
         <h3 class="mb-2 text-4xl font-bold tracking-tight text-heading md:text-5xl lg:text-6xl">{{__('admin.category',['action'=>''])}}</h3>
-        <a type="button" href="{{ route('admin.blog.create') }}"
+        <a type="button" href="{{ route('admin.category.create') }}"
            class="text-white bg-brand box-border border border-transparent h-min hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">
             {{__('admin.category_start',['action'=>__('admin.add')])}} </a>
     </div>
@@ -30,7 +30,7 @@
                            class="block w-full max-w-96 ps-9 pe-3 py-2 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body"
                            placeholder="{{__('admin.search')}}">
                 </div>
-                <button onclick="action_search_list('isearch','{{route('admin.blog.search')}}')" type="button"
+                <button onclick="action_search_list('isearch','{{route('admin.category.search')}}')" type="button"
                         class="min-w-16 text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">
                     {{__('admin.send')}}</button>
             </div>
@@ -53,16 +53,12 @@
                  class="z-10 hidden bg-neutral-primary-medium border border-default-medium rounded-base shadow-lg w-32">
                 <ul class="p-2 text-sm text-body font-medium" aria-labelledby="dropdownDefaultButton">
                     <li>
-                        <a href="{{route('admin.blog.index',['status'=>\App\Enum\Blog\BlogStatus::PUBLIC])}}"
-                           class="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{{__('admin.public')}}</a>
+                        <a href="{{route('admin.category.index',['status'=>\App\Enum\Category\CategoryStatus::ACTIVE])}}"
+                           class="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{{__('admin.active')}}</a>
                     </li>
                     <li>
-                        <a href="{{route('admin.blog.index',['status'=>\App\Enum\Blog\BlogStatus::DRAFT])}}"
-                           class="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{{__('admin.draft')}}</a>
-                    </li>
-                    <li>
-                        <a href="{{route('admin.blog.index',['status'=>\App\Enum\Blog\BlogStatus::DELETED])}}"
-                           class="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{{__('admin.deleted')}}</a>
+                        <a href="{{route('admin.category.index',['status'=>\App\Enum\Category\CategoryStatus::INACTIVE])}}"
+                           class="inline-flex items-center w-full p-2 hover:bg-neutral-tertiary-medium hover:text-heading rounded">{{__('admin.inactive')}}</a>
                     </li>
                 </ul>
             </div>
@@ -81,13 +77,11 @@
                     {{__('admin.category_start',['action' =>  __('admin.name')])}}
                 </th>
                 <th scope="col" class="px-6 py-3 font-medium">
-                    {{__('admin.path')}}
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium w-84">
-                    {{__('admin.content')}}
+                    {{__('admin.image')}}
                 </th>
                 <th scope="col" class="px-6 py-3 font-medium">
-                    {{__('admin.image')}}
+                    {{__('admin.path')}}
+                </th>
                 </th>
                 <th scope="col" class="px-6 py-3 font-medium">
                     {{__('admin.category_end',['action'=>__('admin.parent')])}}
@@ -114,27 +108,24 @@
                         {{ $items->name }}
                     </th>
                     <td class="px-6 py-4">
-                        {{ $items->slug }}
-                    </td>
-                    <td class="px-6 py-4">
-                        {{ $items->contents }}
-                    </td>
-                    <td class="px-6 py-4">
                         @if($items->ImageChildren)
                             <img src="{{ asset('storage/' . $items->ImageChildren->image_path) }}" width="40" alt="{{ $items->name }}">
                         @endif
                     </td>
                     <td class="px-6 py-4">
-                        {{ $items->cateChildren->name ?? '' }}
+                        {{ $items->slug }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ $items->parent->name ?? '' }}
                     </td>
                     <td class="px-6 py-4">
                         {{ $items->status->label() ?? '' }}
                     </td>
                     <td class="px-6 py-4 w-32 flex justify-content-center">
-                        <a href="{{ route('admin.blog.edit', $items->id) }}" class="font-medium text-fg-brand hover:underline">
+                        <a href="{{ route('admin.category.edit', $items->id) }}" class="font-medium text-fg-brand hover:underline">
                             <img src="/image/svg/edit.svg" width="30" height="30" alt="{{__('admin.edit')}}"/>
                         </a>
-                        <a href="{{ route('admin.blog.delete', $items->id) }}" class="font-medium text-fg-brand hover:underline">
+                        <a href="{{ route('admin.category.delete', $items->id) }}" class="font-medium text-fg-brand hover:underline">
                             <img src="/image/svg/delete.svg" width="30" height="30" alt="{{__('admin.delete')}}"/>
                         </a>
                     </td>
@@ -142,40 +133,19 @@
             @endforeach
             </tbody>
         </table>
-        <nav class="flex items-center flex-column flex-wrap md:flex-row justify-between p-4" aria-label="Table navigation">
-      <span class="text-sm font-normal text-body mb-4 md:mb-0 block w-full md:inline md:w-auto">{{__('admin.showing')}}&nbsp;<span
-              class="font-semibold text-heading">1-10</span> {{__('admin.of')}} <span class="font-semibold text-heading">1000</span></span>
-            <ul class="flex -space-x-px text-sm">
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium rounded-s-base text-sm px-3 h-9 focus:outline-none">{{__('admin.previous')}}</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">1</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">2</a>
-                </li>
-                <li>
-                    <a href="#" aria-current="page"
-                       class="flex items-center justify-center text-fg-brand bg-brand-softer box-border border border-default-medium hover:bg-brand-soft hover:text-fg-brand font-medium text-sm w-9 h-9 focus:outline-none">3</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">...</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium text-sm w-9 h-9 focus:outline-none">5</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading font-medium rounded-e-base text-sm px-3 h-9 focus:outline-none">{{__('admin.next')}}</a>
-                </li>
-            </ul>
-        </nav>
+        @if ($listCate->lastPage() > 1)
+            <nav class="custom-paginate flex items-center flex-column flex-wrap md:flex-row justify-between p-4" aria-label="Table navigation">
+                <div class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        {!! $listCate->links('pagination::simple-tailwind') !!}
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            {!! $listCate->links() !!}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        @endif
     </div>
-
 @endsection

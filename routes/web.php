@@ -11,7 +11,6 @@ Route::group(['middleware' => ['admin.auth'], 'prefix'=> 'admin','as' => 'admin.
     Route::group(['prefix'=> 'category','as' => 'category.'], function () {
         Route::get('/', [CategoryController::class,'index'])->name('index');
     });
-
     Route::group(['prefix'=> 'blog','as' => 'blog.'], function () {
         Route::match(['get', 'post'],'/', [BlogController::class,'index'])->name('index');
         Route::match(['get', 'post'],'/create', [BlogController::class,'create'])->name('create');
@@ -20,11 +19,11 @@ Route::group(['middleware' => ['admin.auth'], 'prefix'=> 'admin','as' => 'admin.
         Route::match(['get'],'/search', [BlogController::class,'search'])->name('search');
     });
     Route::group(['prefix'=> 'category','as' => 'category.'], function () {
-        Route::match(['get', 'post'],'/', [CategoryController::class,'index'])->name('index');
-//        Route::match(['get', 'post'],'/create', [BlogController::class,'create'])->name('create');
-//        Route::match(['get', 'post'],'/edit/{id}', [BlogController::class,'edit'])->name('edit');
-//        Route::match(['post'],'/delete/{id}', [BlogController::class,'delete'])->name('delete');
-//        Route::match(['get'],'/search', [BlogController::class,'search'])->name('search');
+        Route::match(['get'],'/', [CategoryController::class,'index'])->name('index');
+        Route::match(['get', 'post'],'/create', [CategoryController::class,'create'])->name('create');
+        Route::match(['get', 'post'],'/edit/{id}', [CategoryController::class,'edit'])->name('edit');
+        Route::match(['get'],'/delete/{id}', [CategoryController::class,'delete'])->name('delete');
+        Route::match(['get'],'/search', [CategoryController::class,'search'])->name('search');
     });
 });
 Route::group(['prefix'=> 'blog'], function () {

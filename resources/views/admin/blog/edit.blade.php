@@ -10,21 +10,21 @@
   </script>
 @endpush
 @section('content')
-  <h3 class="mb-2 text-4xl font-bold tracking-tight text-heading md:text-5xl lg:text-6xl">{{__('admin.edit_blog',['action' => ($route == 'create' ? 'Thêm' : 'Sửa')])}}</h3>
+  <h3 class="mb-2 text-4xl font-bold tracking-tight text-heading md:text-5xl lg:text-6xl">{{__('admin.edit_blog',['action' => ($route == 'create' ? __('admin.add') : __('admin.edit'))])}}</h3>
   <x-admin.breadcrumb />
   <form method="post" href="{{ route('admin.blog.' . $route, ['id' => $id ?? '']) }}" class="" enctype="multipart/form-data">
     @csrf
     <div class="mb-5">
-      <label for="name" class="block mb-2.5 text-sm font-medium text-heading">{{__('admin.edit_blog',['action' => 'Tên'])}}</label>
+      <label for="name" class="block mb-2.5 text-sm font-medium text-heading">{{__('admin.edit_blog',['action' => __('admin.name')])}}</label>
       <input type="text" id="name" name="name" value="{{ old('name',$blog->name ?? '') }}"
         class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
-        placeholder="Tên bài viết" required />
+        placeholder="{{__('admin.edit_blog', ['action' => __('admin.name')])}}" required />
     </div>
     <div class="mb-5">
-      <label for="slug" class="block mb-2.5 text-sm font-medium text-heading">{{__('admin.name_path',['action' => 'Tên'])}}</label>
+      <label for="slug" class="block mb-2.5 text-sm font-medium text-heading">{{__('admin.name_path',['action' => __('admin.name')])}}</label>
       <input type="text" id="slug" name="slug" value="{{ old('slug',$blog->slug ?? '') }}"
         class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow-xs placeholder:text-body"
-        placeholder="Tên đường dẫn" @if($route=="edit") required @endif />
+        placeholder="{{__('admin.name_path', ['action' => __('admin.name')])}}" @if($route=="edit") required @endif />
     </div>
     <div class="mb-5">
       <label class="block mb-2.5 text-sm font-medium text-heading" for="file_input">{{__('admin.avatar')}}</label>
@@ -32,11 +32,12 @@
         class="cursor-pointer bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full shadow-xs placeholder:text-body"
         id="file_input" type="file"  accept="image/*">
          <div class="flex items-center justify-center w-full">
-        <img id="avatar-preview" src="{{ $hasImage ? asset('storage/' . $blog->ImageChildren->image_path) : '#' }}" alt="Preview"
-             class="{{ !$hasImage ? 'hidden' : '' }} w-32 h-32 rounded-lg object-cover border border-gray-300">
-    </div>
+            <img id="avatar-preview" src="{{ $hasImage ? asset('storage/' . $blog->ImageChildren->image_path) : '#' }}" alt="Preview"
+                 class="{{ !$hasImage ? 'hidden' : '' }} w-32 h-32 rounded-lg object-cover border border-gray-300">
+        </div>
     </div>
     <div class="mb-5">
+        <label for="slug" class="block mb-2.5 text-sm font-medium text-heading">{{__('admin.category_start',['action' => __('admin.select')])}}</label>
       <select id="countries" name="category" value="{{ old('category') }}"
         class="block w-full px-3 py-2.5 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body">
         @if($listCategories->isEmpty())
