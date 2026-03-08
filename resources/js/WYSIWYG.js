@@ -149,67 +149,25 @@ window.addEventListener('load', function() {
     document.getElementById('toggleHRButton').addEventListener('click', () => {
         editor.chain().focus().setHorizontalRule().run();
     });
-        document.getElementById('addImageButton').addEventListener('click', function() {
-            // 1. Khai báo các thành phần Modal (Đảm bảo ID này có trong HTML của bạn)
-            var modal = document.getElementById('lfmModal');
-            var iframe = document.getElementById('lfmIframe');
-            var route_prefix = '/filemanager';
+    document.getElementById('addImageButton').addEventListener('click', function() {
 
-            // 2. Tạo URL và load vào Iframe thay vì mở cửa sổ mới
-            var lfm_url = route_prefix + '?type=Images&v=' + Math.random();
+        var route_prefix = '/filemanager';
+        // var lfm_url = route_prefix + '?type=Images&t=' + new Date().getTime();
+        var lfm_url = route_prefix + '?type=Images&v=' + Math.random();
+        var fm = window.open(lfm_url, 'FileManager_'+ Date.now(), 'width=900,height=600');
+        window.SetUrl = function (items) {
+            const url = Array.isArray(items) ? items[0].url : items.url;
 
-            if (iframe && modal) {
-                iframe.src = lfm_url;
-                modal.classList.remove('hidden'); // Hiển thị Modal Tailwind
-                modal.style.display = 'flex';     // Đảm bảo hiển thị dạng flex
-            } else {
-                console.error("Không tìm thấy Modal hoặc Iframe!");
-                return;
-            }
+            if (url) {
+                editor.chain().focus().setImage({ src: url }).run();
 
-            // 3. Định nghĩa hàm nhận kết quả (Giữ nguyên logic xử lý ảnh của bạn)
-            // 3. Định nghĩa hàm nhận kết quả
-            window.SetUrl = function (items) {
-                // Lấy URL an toàn
-                const url = Array.isArray(items) ? (items[0] ? items[0].url : items.url) : items.url;
-
-                if (url) {
-                    editor.chain()
-                        .focus()
-                        // Giải phóng vùng chọn hiện tại (nếu đang lỡ tay bấm vào ảnh cũ)
-                        .deleteSelection()
-                        // Chèn ảnh mới
-                        .insertContent({
-                            type: 'image',
-                            attrs: { src: url }
-                        })
-                        // QUAN TRỌNG: Tạo một dòng mới ngay sau ảnh và nhảy con trỏ xuống đó
-                        .createParagraphNear()
-                        .focus('end')
-                        .run();
-
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success('Đã chèn ảnh thành công!');
-                    }
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Đã chèn ảnh thành công!');
                 }
-
-                closeLfm();
-            };
-
-
-            // Hàm đóng modal và dọn dẹp
-            function closeLfm() {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-                iframe.src = '';      // Xóa src để tránh tải ngầm
-                window.SetUrl = null; // Xóa callback để tránh xung đột lần sau
             }
-
-            // Gán sự kiện đóng cho nút X bên trong modal (nếu có)
-            const closeBtn = document.getElementById('closeLfmModal');
-            if (closeBtn) closeBtn.onclick = closeLfm;
-        });
-
+            window.SetUrl = null;
+        };
+    });
 
         // document.getElementById('addImageButton').addEventListener('click', () => {
     //     const url = window.prompt('Enter image URL:', 'https://placehold.co/600x400');
