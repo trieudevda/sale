@@ -6,17 +6,17 @@ import { Permission } from './permissions.entity';
 export class RolePermission {
   @PrimaryColumn({
     name: 'role_id',
-    type: 'bigint',
-    unsigned: true,
+    type: 'int',
+    // unsigned: true,
   })
-  roleId!: string;
+  roleId!: number;
 
   @PrimaryColumn({
     name: 'permission_id',
-    type: 'bigint',
-    unsigned: true,
+    type: 'int', 
+    // unsigned: true,
   })
-  permissionId!: string;
+  permissionId!: number;
 
   @ManyToOne(() => Role)
   @JoinColumn({

@@ -16,7 +16,7 @@ export class UserRole {
     type: 'bigint',
     unsigned: true,
   })
-  roleId!: string;
+  roleId!: number;
 
   @ManyToOne(() => User)
   @JoinColumn({

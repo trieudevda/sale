@@ -16,7 +16,7 @@ import { RoleSource } from '../enums/user-role-source.enum';
   unique: true,
 })
 export class Role {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({type: 'int'})
   id!: number;
 
   @Column({
