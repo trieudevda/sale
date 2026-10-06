@@ -10,6 +10,7 @@ import { Injectable, Logger } from '@nestjs/common';
 });
  */
 export interface LogMeta {
+  statusCode?: number;
   context?: string;
   method?: string;
   path?: string;
