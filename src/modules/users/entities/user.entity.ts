@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinTable,
   ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -76,6 +77,17 @@ export class User {
   authVersion!: number;
 
   @ManyToMany(() => Role, (role) => role.users)
+  @JoinTable({
+  name: 'user_roles',
+  joinColumn: {
+    name: 'user_id',
+    referencedColumnName: 'id',
+  },
+  inverseJoinColumn: {
+    name: 'role_id',
+    referencedColumnName: 'id',
+  },
+})
   roles!: Role[];
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })

@@ -16,8 +16,8 @@ import { RoleSource } from '../enums/user-role-source.enum';
   unique: true,
 })
 export class Role {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
+  id!: string;
 
   @Column({
     type: 'varchar',
@@ -38,7 +38,7 @@ export class Role {
   })
   source!: RoleSource;
 
-  @ManyToMany(() => Permission)
+  @ManyToMany(() => Permission,(permission) => permission.roles)
   @JoinTable({
     name: 'role_permissions',
 
@@ -53,6 +53,7 @@ export class Role {
     },
   })
   permissions!: Permission[];
+
   @ManyToMany(() => User, (user) => user.roles)
   users!: User[];
 }

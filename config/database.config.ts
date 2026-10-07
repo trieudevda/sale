@@ -4,19 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { DataSourceOptions } from 'typeorm';
 
-
-// export const getDatabaseOptions = (): DataSourceOptions => ({
-//   type: 'mysql',
-//   host: host,
-//   port: Number(port ?? 3306),
-//   username: username,
-//   password: password,
-//   database: database,
-//   synchronize: false,
-//   ssl: {
-//     ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'ca.pem')),
-//   },
-// });
 export const databaseConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
@@ -30,9 +17,9 @@ export const databaseConfig = (
     autoLoadEntities: true,
     synchronize: false,
     migrationsTableName: 'migrations',
-    ssl: {
-      ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'ca.pem')),
-    },
+    // ssl: {
+    //   ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'ca.pem')),
+    // },
     retryAttempts: 5,
     retryDelay: 3000,
   };

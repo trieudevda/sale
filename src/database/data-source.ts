@@ -15,9 +15,9 @@ const dataSource = new DataSource({
   entities: ['src/modules/**/entities/*{.ts,.js}'],
   migrations: ['src/database/migrations/*{.ts,.js}'],
   migrationsTableName: 'migrations',
-  ssl: {
-    ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'ca.pem')),
-  },
+  // ssl: {
+  //   ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'ca.pem')),
+  // },
 });
 
 export default dataSource;
