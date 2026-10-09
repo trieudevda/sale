@@ -15,6 +15,12 @@ export const DATABASE_CONSTRAINT_MAP: Record<string, DatabaseConstraintInfo> = {
     message: 'Tên đăng nhập đã tồn tại',
   },
 
+  // Authorization
+  uq_roles_code: {
+    code: 'ROLE_CODE_ALREADY_EXISTS',
+    message: 'Mã vai trò đã tồn tại',
+  },
+
   // Customers
   uq_customers_phone: {
     code: 'CUSTOMER_PHONE_ALREADY_EXISTS',

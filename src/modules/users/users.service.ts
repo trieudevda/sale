@@ -1,10 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
+import CreateUserDto from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, In, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
+import { ErrorCode } from '../../common/exceptions/error-code';
+import { Role } from '../authorization/entities/roles.entity';
+import { AuthorizationService } from '../authorization/authorization.service';
+import { RoleService } from '../authorization/role.sevice';
 
 @Injectable()
 export class UsersService {
@@ -12,24 +20,66 @@ export class UsersService {
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    ) {}
-  async createOrder() {
-    return this.dataSource.transaction(async (manager) => {
-      // create order
-      // create order items
-      // decrease stock
-    });
-  }
-  async create(createUserDto: CreateUserDto){
-    const pass = await this.hashPassword(createUserDto.passwordHash);
+    private readonly roleService: RoleService,
+  ) {}
+  // async createOrder() {
+  //   return this.dataSource.transaction(async (manager) => {
+  //     // create order
+  //     // create order items
+  //     // decrease stock
+  //   });
+  // }
+  async create(createUserDto: CreateUserDto) {
+    const { roleIds, password, ...userData } = createUserDto;
+    const whereUser: FindOptionsWhere<User>[] = [];
+    if (userData.phone) {
+      whereUser.push({ phone: userData.phone });
+    }
+    if (userData.email) {
+      whereUser.push({ email: userData.email });
+    }
+    if (userData.username) {
+      whereUser.push({ username: userData.username });
+    }
+    const exists = whereUser.length
+      ? await this.userRepository.find({
+          where: whereUser,
+          select: {
+            phone: true,
+            email: true,
+            username: true,
+          },
+        })
+      : [];
+    const conflicts: string[] = [];
+    for (const user of exists) {
+      if (userData.phone && userData.phone === user.phone) {
+        conflicts.push('phone');
+      }
+      if (userData.email && userData.email === user.email) {
+        conflicts.push('email');
+      }
+      if (userData.username && userData.username === user.username) {
+        conflicts.push('username');
+      }
+    }
+    if (conflicts.length > 0) {
+      throw new ConflictException({
+        code: ErrorCode.USER_ALREADY_EXISTS,
+        message: 'User information already exists',
+        fields: [...new Set(conflicts)],
+      });
+    }
+    const roles = roleIds?.length
+      ? await this.roleService.findAllRole({ ids: roleIds })
+      : undefined;
+    const passwordHash = await this.hashPassword(password);
     const user = this.userRepository.create({
-      email: createUserDto.email,
-      phone: createUserDto.phone,
-      username: createUserDto.username,
-      passwordHash: pass,
+      ...userData,
+      passwordHash: passwordHash,
+      roles,
     });
     return this.userRepository.save(user);
-    return 'This action adds a new user';
   }
 
   findAll() {

@@ -25,13 +25,13 @@ export class User {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ name: 'first_name', type: 'varchar', length: 100 })
+  @Column({ name: 'first_name', type: 'varchar', length: 100, nullable: true })
   firstName!: string;
 
-  @Column({ name: 'last_name', type: 'varchar', length: 100 })
+  @Column({ name: 'last_name', type: 'varchar', length: 100, nullable: true })
   lastName!: string;
 
-  @Column({ name: 'email', type: 'varchar', length: 100 })
+  @Column({ name: 'email', nullable: true, type: 'varchar', length: 100 })
   email!: string;
 
   @Column({
@@ -54,7 +54,7 @@ export class User {
   })
   phoneVerifiedAt!: Date | null;
 
-  @Column({ name: 'address', type: 'varchar', length: 255 })
+  @Column({ name: 'address', type: 'varchar', length: 255, nullable: true })
   address!: string;
 
   @Column({ name: 'username', type: 'varchar', length: 100 })
@@ -78,16 +78,16 @@ export class User {
 
   @ManyToMany(() => Role, (role) => role.users)
   @JoinTable({
-  name: 'user_roles',
-  joinColumn: {
-    name: 'user_id',
-    referencedColumnName: 'id',
-  },
-  inverseJoinColumn: {
-    name: 'role_id',
-    referencedColumnName: 'id',
-  },
-})
+    name: 'user_roles',
+    joinColumn: {
+      name: 'user_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'role_id',
+      referencedColumnName: 'id',
+    },
+  })
   roles!: Role[];
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })

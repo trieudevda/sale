@@ -1,0 +1,97 @@
+Module: Gom và quản lý các chức năng liên quan.
+
+Controller: Nhận request và trả response API.
+
+Service: Xử lý logic nghiệp vụ.
+
+DTO: Định nghĩa và chuẩn hóa dữ liệu vào/ra.
+
+Entity: Đại diện dữ liệu/bảng trong database.
+
+Repository: Thực hiện truy vấn và thao tác database.
+
+Mapper: Chuyển đổi giữa Entity, DTO và model.
+
+Guard: Kiểm tra quyền trước khi cho phép truy cập API.
+
+Authentication: Xác thực người dùng.
+
+Authorization: Kiểm tra người dùng được phép làm gì.
+
+Role/Permission: Quản lý vai trò và quyền chi tiết.
+
+Middleware: Xử lý request trước khi vào Controller.
+
+Pipe: Validate và chuyển đổi dữ liệu đầu vào.
+
+Interceptor: Can thiệp request/response, log, transform dữ liệu.
+
+Exception Filter: Bắt và chuẩn hóa lỗi trả về.
+
+Validation: Kiểm tra dữ liệu hợp lệ.
+
+Exception: Định nghĩa các loại lỗi của hệ thống.
+
+Config: Quản lý biến môi trường và cấu hình hệ thống.
+
+Logger: Ghi log hoạt động và lỗi.
+
+Cache: Lưu dữ liệu tạm để tăng tốc độ.
+
+Queue/Job: Xử lý tác vụ nền hoặc tác vụ nặng.
+
+Cron/Scheduler: Chạy tác vụ theo lịch.
+
+Event: Xử lý nghiệp vụ theo sự kiện.
+
+Transaction: Đảm bảo nhiều thao tác database thành công hoặc thất bại cùng nhau.
+
+Concurrency: Xử lý nhiều người cùng sửa một dữ liệu.
+
+Migration: Quản lý thay đổi cấu trúc database.
+
+Seeder: Tạo dữ liệu mặc định hoặc dữ liệu mẫu.
+
+Upload: Nhận file từ người dùng.
+
+Storage: Quản lý nơi lưu file.
+
+Media Processor: Xử lý ảnh, video và các file media.
+
+Mailer: Gửi email.
+
+Notification: Quản lý thông báo.
+
+Pagination: Phân trang dữ liệu.
+
+Filtering: Lọc dữ liệu theo điều kiện.
+
+Sorting: Sắp xếp dữ liệu.
+
+Search: Tìm kiếm dữ liệu.
+
+Query Builder: Xây dựng truy vấn động.
+
+Soft Delete: Xóa mềm dữ liệu.
+
+Audit Log: Ghi lại ai đã thêm, sửa hoặc xóa dữ liệu.
+
+Decorator: Tạo annotation dùng lại trong NestJS.
+
+Enum: Định nghĩa các giá trị cố định.
+
+Constant: Lưu các hằng số dùng chung.
+
+Interface/Type: Định nghĩa kiểu dữ liệu.
+
+Utility/Helper: Chứa các hàm dùng chung.
+
+API Documentation: Tạo tài liệu API.
+
+Health Check: Kiểm tra trạng thái server, database và dịch vụ.
+
+Unit Test: Kiểm thử từng hàm hoặc service.
+
+Integration Test: Kiểm thử nhiều thành phần hoạt động cùng nhau.
+
+E2E Test: Kiểm thử toàn bộ luồng API từ đầu đến cuối.
