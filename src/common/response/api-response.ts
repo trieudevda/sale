@@ -39,9 +39,7 @@ export interface ApiErrorResponse {
   timestamp: string;
 }
 
-export type ApiResponse<T> =
-  | ApiSuccessResponse<T>
-  | ApiErrorResponse;
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export class ApiResponseBuilder {
   static success<T>(

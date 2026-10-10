@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, dayjs } from "config/datetime.config";
+import { BUSINESS_TIME_ZONE, dayjs } from 'config/datetime.config';
 
 function validDate(value: Date): Date {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
@@ -14,13 +14,15 @@ export function nowUtc(): Date {
 
 /** Cộng phút từ một thời điểm, tính trên UTC. */
 export function addMinutes(value: Date, minutes: number): Date {
-  if (!Number.isInteger(minutes)) throw new RangeError('Số phút phải là số nguyên');
+  if (!Number.isInteger(minutes))
+    throw new RangeError('Số phút phải là số nguyên');
   return dayjs.utc(validDate(value)).add(minutes, 'minute').toDate();
 }
 
 /** Cộng ngày 24 giờ từ một thời điểm, tính trên UTC. */
 export function addDays(value: Date, days: number): Date {
-  if (!Number.isInteger(days)) throw new RangeError('Số ngày phải là số nguyên');
+  if (!Number.isInteger(days))
+    throw new RangeError('Số ngày phải là số nguyên');
   return dayjs.utc(validDate(value)).add(days, 'day').toDate();
 }
 

@@ -22,9 +22,10 @@ export interface ResponseData<T> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T>
-  implements NestInterceptor<T, ApiSuccessResponse<T>>
-{
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ApiSuccessResponse<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler<ResponseData<T> | T>,
@@ -34,17 +35,15 @@ export class ResponseInterceptor<T>
     return next.handle().pipe(
       map((result) => {
         const isCustomResponse =
-          result &&
-          typeof result === 'object' &&
-          'data' in result;
+          result && typeof result === 'object' && 'data' in result;
 
         if (isCustomResponse) {
-          const custom = result as ResponseData<T>;
+          const custom = result;
 
           return {
             success: true,
             statusCode: response.statusCode,
-            code: custom.code ?? 0,  // lỗi cụ thể enum từng module
+            code: custom.code ?? 0, // lỗi cụ thể enum từng module
             message: custom.message ?? 'Success',
             data: custom.data,
             timestamp: new Date().toISOString(),
@@ -56,7 +55,7 @@ export class ResponseInterceptor<T>
           statusCode: response.statusCode,
           code: 0,
           message: 'Success',
-          data: result as T,
+          data: result,
           timestamp: new Date().toISOString(),
         };
       }),

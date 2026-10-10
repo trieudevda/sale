@@ -38,7 +38,7 @@ export class Role {
   })
   source!: RoleSource;
 
-  @ManyToMany(() => Permission,(permission) => permission.roles)
+  @ManyToMany(() => Permission, (permission) => permission.roles)
   @JoinTable({
     name: 'role_permissions',
 

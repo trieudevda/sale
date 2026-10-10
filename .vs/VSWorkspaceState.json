@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\database",
+    "\\src\\database\\migrations",
+    "\\src\\modules",
+    "\\src\\modules\\auth"
+  ],
+  "SelectedNode": "\\src\\modules\\auth\\auth.service.ts",
+  "PreviewInSolutionExplorer": false
+}

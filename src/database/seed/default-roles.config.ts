@@ -1,12 +1,9 @@
-import { UserPermission } from '../../modules/users/user.permissions';
-
 export const DEFAULT_ROLES = [
   {
     code: 'ADMIN',
     name: 'Quản trị viên',
-    permissions: [
-      ...Object.values(UserPermission),
-    ],
+    grantAllPermissions: true,
+    permissions: [],
   },
 
   // {

@@ -1,14 +1,16 @@
 // import dataSource from '../data-source';
 import { seedAuthorization } from './authorization.seed';
 import dataSource from '../data-source';
+import { seedBootstrapAdmin } from './init-admin';
 
 async function bootstrap() {
   await dataSource.initialize();
 
   try {
     await seedAuthorization(dataSource);
-
-    console.log('Authorization seed completed');
+    await seedBootstrapAdmin(dataSource);
+    // await seedBootstrapAdmin(dataSource);
+    console.log('Authorization and bootstrap admin seed completed');
   } finally {
     await dataSource.destroy();
   }

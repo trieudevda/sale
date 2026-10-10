@@ -1,4 +1,10 @@
-import { Column, Entity, Index, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Role } from './roles.entity';
 
 @Entity('permissions')
@@ -6,7 +12,7 @@ import { Role } from './roles.entity';
   unique: true,
 })
 export class Permission {
-  @PrimaryGeneratedColumn({type: 'int', unsigned: true})
+  @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id!: number;
 
   @Column({
@@ -27,7 +33,7 @@ export class Permission {
     default: true,
   })
   isActive!: boolean;
-  
+
   @ManyToMany(() => Role, (role) => role.permissions)
   roles!: Role[];
 }

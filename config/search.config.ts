@@ -18,7 +18,18 @@ export const SEARCH_CONFIG = {
     defaultLimit: 24,
     maxLimit: 100,
   },
-
+  user: {
+    defaultSort: 'newest',
+    sortKeys: [
+      'newest',
+      'oldest',
+      'username_asc',
+      'username_desc',
+      'name_asc',
+      'name_desc',
+    ],
+    filterKeys: ['status', 'roleId'],
+  },
   product: {
     defaultSort: 'newest',
     sortKeys: [
@@ -29,17 +40,12 @@ export const SEARCH_CONFIG = {
       'name_asc',
       'name_desc',
     ],
-    filterKeys: [
-      'categoryId',
-      'brandId',
-      'minPrice',
-      'maxPrice',
-      'inStock',
-    ],
+    filterKeys: ['categoryId', 'brandId', 'minPrice', 'maxPrice', 'inStock'],
     minPrice: 0,
   },
 } as const;
-
+export type UserSortKey =
+  (typeof SEARCH_CONFIG)['user']['sortKeys'][number];
 export type ProductSortKey =
   (typeof SEARCH_CONFIG)['product']['sortKeys'][number];
 

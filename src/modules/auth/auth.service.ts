@@ -12,13 +12,50 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserStatus } from '../users/enums/user-status.enum';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import {
+  AccessTokenPayload,
+  RefreshTokenPayload,
+} from './interface/token-payload.interface';
+import { ConfigService } from '@nestjs/config';
+// import { ConfigService } from 'node_modules/@nestjs/config/dist/config.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
+  private createAccessToken(user: { id: string; username: string; roles: { code: string }[] }) {
+    const payload: AccessTokenPayload = {
+      sub: user.id,
+      username: user.username,
+      // roles: user.roles.map((role) => role.code),
+      tokenType: 'access',
+    };
+
+    return this.jwtService.signAsync(payload, {
+      secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      expiresIn: this.configService.getOrThrow('JWT_ACCESS_EXPIRES_IN'),
+    });
+  }
+
+  private createRefreshToken(user: {
+    id: string;
+    username: string;
+    authVersion: number;
+  }) {
+    const payload: RefreshTokenPayload = {
+      sub: user.id,
+      username: user.username,
+      tokenType: 'refresh',
+      authVersion: user.authVersion,
+    };
+    return this.jwtService.signAsync(payload, {
+      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.getOrThrow('JWT_REFRESH_EXPIRES_IN'),
+    });
+  }
   async login(dto: LoginDto) {
     const user = await this.usersService.findByUsername(dto.username);
 
@@ -27,8 +64,8 @@ export class AuthService {
     }
 
     const isPasswordValid = await this.usersService.verifyPassword(
-      dto.password,
       user.passwordHash,
+      dto.password,
     );
 
     if (!isPasswordValid) {
@@ -39,48 +76,95 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
-    const payload = {
-      sub: user.id,
-      username: user.username,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
+    const [accessToken, refreshToken] = await Promise.all([
+      this.createAccessToken(user),
+      this.createRefreshToken(user),
+    ]);
 
     return {
       accessToken,
+      refreshToken,
       tokenType: 'Bearer',
     };
   }
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  getProfile(
-    @Req()
-    req: Request & {
-      user: {
-        id: string;
-        username: string;
-      };
-    },
-  ) {
-    return req.user;
-  }
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  async refresh(refreshToken: string) {
+    let payload: RefreshTokenPayload;
+
+    try {
+      payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        },
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (payload.tokenType !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    const user = await this.usersService.findAuthStateById(payload.sub);
+
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    // Token đã bị thu hồi khi version không còn khớp.
+    if (payload.authVersion !== user.authVersion) {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
+    const [accessToken, newRefreshToken] = await Promise.all([
+      this.createAccessToken(user),
+      this.createRefreshToken(user),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      tokenType: 'Bearer',
+    };
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  async logoutAll(userId: string) {
+    await this.usersService.revokeAllRefreshTokens(userId);
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+    return {
+      message: 'All refresh tokens have been revoked',
+    };
   }
+  // @Get('profile')
+  // @UseGuards(JwtAuthGuard)
+  // getProfile(
+  //   @Req()
+  //   req: Request & {
+  //     user: {
+  //       id: string;
+  //       username: string;
+  //     };
+  //   },
+  // ) {
+  //   return req.user;
+  // }
+  // create(createAuthDto: CreateAuthDto) {
+  //   return 'This action adds a new auth';
+  // }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+  // findAll() {
+  //   return `This action returns all auth`;
+  // }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
-  }
+  // findOne(id: number) {
+  //   return `This action returns a #${id} auth`;
+  // }
+
+  // update(id: number, updateAuthDto: UpdateAuthDto) {
+  //   return `This action updates a #${id} auth`;
+  // }
+
+  // remove(id: number) {
+  //   return `This action removes a #${id} auth`;
+  // }
 }

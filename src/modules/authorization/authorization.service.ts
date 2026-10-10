@@ -22,28 +22,6 @@ export class AuthorizationService {
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
   ) {}
-  async findAllRole(options: FindAllRoleOptions = {}) {
-    const { ids, relations = {} } = options;
-    if (ids) {
-      const uniqueIds = [...new Set(ids)];
-      const roles = await this.roleRepository.find({
-        where: { id: In(uniqueIds) },
-      });
-      const foundRoleIds = new Set(roles.map((role) => role.id));
-      const invalidRoleIds = uniqueIds.filter((id) => !foundRoleIds.has(id));
-      if (invalidRoleIds.length > 0) {
-        throw new BadRequestException({
-          code: ErrorCode.ROLE_NOT_FOUND,
-          message: 'Some roles do not exist',
-          roleIds: invalidRoleIds,
-        });
-      }
-      return roles;
-    }
-    return this.roleRepository.find({
-      relations,
-    });
-  }
 
   // async create(createAuthorizationDto: CreateAuthorizationDto) {
   //   const existing = await this.roleRepository.findOne({

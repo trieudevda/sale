@@ -11,7 +11,6 @@ import { EntityNotFoundError, QueryFailedError } from 'typeorm';
 import { AppLoggerService } from '../logger/app-logger.service';
 import {
   DATABASE_CONSTRAINT_MAP,
-  DatabaseConstraintInfo,
 } from './database-constraint-map';
 // DTO sai               → ValidationPipe
 // Không tìm thấy        → NotFoundException
