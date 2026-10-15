@@ -6,10 +6,13 @@ import { AuthorizationModule } from '../authorization/authorization.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { RevokedRefreshToken } from './entities/revoked-refresh-token.entity';
 
 @Module({
   imports: [
     ConfigModule,
+    TypeOrmModule.forFeature([RevokedRefreshToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

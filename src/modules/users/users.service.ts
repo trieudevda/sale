@@ -1,18 +1,20 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import CreateUserDto from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Brackets, DataSource, FindOptionsWhere, In, Repository } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  FindOptionsWhere,
+  Repository,
+} from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { ErrorCode } from '../../common/exceptions/error-code';
-import { Role } from '../authorization/entities/roles.entity';
-import { AuthorizationService } from '../authorization/authorization.service';
 import { RoleService } from '../authorization/role.sevice';
 import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
@@ -25,13 +27,6 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly roleService: RoleService,
   ) {}
-  // async createOrder() {
-  //   return this.dataSource.transaction(async (manager) => {
-  //     // create order
-  //     // create order items
-  //     // decrease stock
-  //   });
-  // }
   async create(createUserDto: CreateUserDto) {
     const { roleIds, password, ...userData } = createUserDto;
     const whereUser: FindOptionsWhere<User>[] = [];

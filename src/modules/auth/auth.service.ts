@@ -1,32 +1,39 @@
 import {
-  Get,
   Injectable,
-  Req,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserStatus } from '../users/enums/user-status.enum';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import {
   AccessTokenPayload,
   RefreshTokenPayload,
 } from './interface/token-payload.interface';
 import { ConfigService } from '@nestjs/config';
-// import { ConfigService } from 'node_modules/@nestjs/config/dist/config.service';
-
+import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RevokedRefreshToken } from './entities/revoked-refresh-token.entity';
+import { QueryFailedError, Repository } from 'typeorm';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+type VerifiedRefreshTokenPayload = RefreshTokenPayload & {
+  exp: number;
+  iat: number;
+};
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
-  private createAccessToken(user: { id: string; username: string; roles: { code: string }[] }) {
+    @InjectRepository(RevokedRefreshToken)
+    private readonly revokeRefreshToken: Repository<RevokedRefreshToken>,
+  ) { }
+  private createAccessToken(user: {
+    id: string;
+    username: string;
+    roles: { code: string }[];
+  }) {
     const payload: AccessTokenPayload = {
       sub: user.id,
       username: user.username,
@@ -50,6 +57,7 @@ export class AuthService {
       username: user.username,
       tokenType: 'refresh',
       authVersion: user.authVersion,
+      jti: randomUUID(),
     };
     return this.jwtService.signAsync(payload, {
       secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
@@ -87,23 +95,9 @@ export class AuthService {
       tokenType: 'Bearer',
     };
   }
-  async refresh(refreshToken: string) {
-    let payload: RefreshTokenPayload;
-
-    try {
-      payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
-        refreshToken,
-        {
-          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        },
-      );
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    if (payload.tokenType !== 'refresh') {
-      throw new UnauthorizedException('Invalid token type');
-    }
+  async refresh({refreshToken}: RefreshTokenDto) {
+    // let payload: RefreshTokenPayload;
+    const payload = await this.verifyRefreshToken({refreshToken});
 
     const user = await this.usersService.findAuthStateById(payload.sub);
 
@@ -115,6 +109,12 @@ export class AuthService {
     if (payload.authVersion !== user.authVersion) {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
+    const consumed = await this.revokeToken(payload.jti, payload.exp);
+
+    if (!consumed) {
+      throw new UnauthorizedException('Refresh token has been revoked or reused');
+    }
+
 
     const [accessToken, newRefreshToken] = await Promise.all([
       this.createAccessToken(user),
@@ -128,6 +128,12 @@ export class AuthService {
     };
   }
 
+  async logout({refreshToken}: RefreshTokenDto) {
+    const payload = await this.verifyRefreshToken({refreshToken});
+    await this.revokeToken(payload.jti, payload.exp);
+    return { message: 'Logged out.' };
+  }
+
   async logoutAll(userId: string) {
     await this.usersService.revokeAllRefreshTokens(userId);
 
@@ -135,36 +141,51 @@ export class AuthService {
       message: 'All refresh tokens have been revoked',
     };
   }
-  // @Get('profile')
-  // @UseGuards(JwtAuthGuard)
-  // getProfile(
-  //   @Req()
-  //   req: Request & {
-  //     user: {
-  //       id: string;
-  //       username: string;
-  //     };
-  //   },
-  // ) {
-  //   return req.user;
-  // }
-  // create(createAuthDto: CreateAuthDto) {
-  //   return 'This action adds a new auth';
-  // }
+  private async verifyRefreshToken(
+    {refreshToken}: RefreshTokenDto,
+  ): Promise<VerifiedRefreshTokenPayload> {
+    try {
+      const payload =
+        await this.jwtService.verifyAsync<VerifiedRefreshTokenPayload>(
+          refreshToken,
+          {
+            secret:
+              this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+          },
+        );
 
-  // findAll() {
-  //   return `This action returns all auth`;
-  // }
+      if (
+        payload.tokenType !== 'refresh' ||
+        typeof payload.sub !== 'string' ||
+        typeof payload.jti !== 'string' ||
+        typeof payload.authVersion !== 'number' ||
+        typeof payload.exp !== 'number'
+      ) {
+        throw new Error('Invalid payload');
+      }
 
-  // findOne(id: number) {
-  //   return `This action returns a #${id} auth`;
-  // }
+      return payload;
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+  private async revokeToken(jti: string, exp: number): Promise<boolean> {
+    try {
+      await this.revokeRefreshToken.insert({
+        jti,
+        expiresAt: new Date(exp * 1000),
+      });
 
-  // update(id: number, updateAuthDto: UpdateAuthDto) {
-  //   return `This action updates a #${id} auth`;
-  // }
+      return true;
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        error.driverError.code === 'ER_DUP_ENTRY'
+      ) {
+        return false;
+      }
 
-  // remove(id: number) {
-  //   return `This action removes a #${id} auth`;
-  // }
+      throw error;
+    }
+  }
 }
