@@ -28,7 +28,7 @@
 ## Project setup
 
 ```bash
-$ npm install
+$ npm install && npm run init
 ```
 
 ## Compile and run the project

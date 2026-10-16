@@ -5,12 +5,7 @@ import {
 } from '@nestjs/common';
 import CreateUserDto from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import {
-  Brackets,
-  DataSource,
-  FindOptionsWhere,
-  Repository,
-} from 'typeorm';
+import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';

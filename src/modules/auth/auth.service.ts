@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -9,6 +6,7 @@ import { UserStatus } from '../users/enums/user-status.enum';
 import {
   AccessTokenPayload,
   RefreshTokenPayload,
+  TokenType,
 } from './interface/token-payload.interface';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
@@ -28,17 +26,19 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRepository(RevokedRefreshToken)
     private readonly revokeRefreshToken: Repository<RevokedRefreshToken>,
-  ) { }
+  ) {}
   private createAccessToken(user: {
     id: string;
     username: string;
     roles: { code: string }[];
+    authVersion: number;
   }) {
     const payload: AccessTokenPayload = {
       sub: user.id,
       username: user.username,
       // roles: user.roles.map((role) => role.code),
-      tokenType: 'access',
+      tokenType: TokenType.ACCESS,
+      authVersion: user.authVersion,
     };
 
     return this.jwtService.signAsync(payload, {
@@ -55,13 +55,14 @@ export class AuthService {
     const payload: RefreshTokenPayload = {
       sub: user.id,
       username: user.username,
-      tokenType: 'refresh',
+      tokenType: TokenType.REFRESH,
       authVersion: user.authVersion,
       jti: randomUUID(),
     };
     return this.jwtService.signAsync(payload, {
       secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.getOrThrow('JWT_REFRESH_EXPIRES_IN'),
+      algorithm: 'HS256',
     });
   }
   async login(dto: LoginDto) {
@@ -95,9 +96,9 @@ export class AuthService {
       tokenType: 'Bearer',
     };
   }
-  async refresh({refreshToken}: RefreshTokenDto) {
+  async refresh({ refreshToken }: RefreshTokenDto) {
     // let payload: RefreshTokenPayload;
-    const payload = await this.verifyRefreshToken({refreshToken});
+    const payload = await this.verifyRefreshToken({ refreshToken });
 
     const user = await this.usersService.findAuthStateById(payload.sub);
 
@@ -109,18 +110,17 @@ export class AuthService {
     if (payload.authVersion !== user.authVersion) {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
-    const consumed = await this.revokeToken(payload.jti, payload.exp);
-
-    if (!consumed) {
-      throw new UnauthorizedException('Refresh token has been revoked or reused');
-    }
-
-
     const [accessToken, newRefreshToken] = await Promise.all([
       this.createAccessToken(user),
       this.createRefreshToken(user),
     ]);
+    const consumed = await this.revokeToken(payload.jti, payload.exp);
 
+    if (!consumed) {
+      throw new UnauthorizedException(
+        'Refresh token has been revoked or reused',
+      );
+    }
     return {
       accessToken,
       refreshToken: newRefreshToken,
@@ -128,8 +128,8 @@ export class AuthService {
     };
   }
 
-  async logout({refreshToken}: RefreshTokenDto) {
-    const payload = await this.verifyRefreshToken({refreshToken});
+  async logout({ refreshToken }: RefreshTokenDto) {
+    const payload = await this.verifyRefreshToken({ refreshToken });
     await this.revokeToken(payload.jti, payload.exp);
     return { message: 'Logged out.' };
   }
@@ -141,21 +141,21 @@ export class AuthService {
       message: 'All refresh tokens have been revoked',
     };
   }
-  private async verifyRefreshToken(
-    {refreshToken}: RefreshTokenDto,
-  ): Promise<VerifiedRefreshTokenPayload> {
+  private async verifyRefreshToken({
+    refreshToken,
+  }: RefreshTokenDto): Promise<VerifiedRefreshTokenPayload> {
     try {
       const payload =
         await this.jwtService.verifyAsync<VerifiedRefreshTokenPayload>(
           refreshToken,
           {
-            secret:
-              this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+            secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+            algorithms: ['HS256'],
           },
         );
 
       if (
-        payload.tokenType !== 'refresh' ||
+        payload.tokenType !== TokenType.REFRESH ||
         typeof payload.sub !== 'string' ||
         typeof payload.jti !== 'string' ||
         typeof payload.authVersion !== 'number' ||

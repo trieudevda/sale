@@ -1,4 +1,4 @@
-enum TokenType {
+export enum TokenType {
   ACCESS = 'access',
   REFRESH = 'refresh',
 }
@@ -7,6 +7,7 @@ export interface AccessTokenPayload {
   username: string;
   // roles: string[];
   tokenType: TokenType.ACCESS;
+  authVersion: number;
 }
 
 export interface RefreshTokenPayload {

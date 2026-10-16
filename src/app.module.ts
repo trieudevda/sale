@@ -21,6 +21,8 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchasesModule } from './modules/purchases/purchases.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -34,6 +36,9 @@ import { AuthorizationModule } from './modules/authorization/authorization.modul
       useFactory: (configService: ConfigService) =>
         databaseConfig(configService),
     }),
+
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 60 }]),
+    ScheduleModule.forRoot(),
 
     AuthModule,
 

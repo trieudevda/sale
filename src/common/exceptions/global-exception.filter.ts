@@ -9,9 +9,7 @@ import { Request, Response } from 'express';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
 
 import { AppLoggerService } from '../logger/app-logger.service';
-import {
-  DATABASE_CONSTRAINT_MAP,
-} from './database-constraint-map';
+import { DATABASE_CONSTRAINT_MAP } from './database-constraint-map';
 // DTO sai               → ValidationPipe
 // Không tìm thấy        → NotFoundException
 // Xung đột trạng thái   → ConflictException

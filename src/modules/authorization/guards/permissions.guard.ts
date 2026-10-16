@@ -12,22 +12,17 @@ export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions =
-      this.reflector.getAllAndOverride<string[]>(
-        PERMISSIONS_KEY,
-        [
-          context.getHandler(),
-          context.getClass(),
-        ],
-      );
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredPermissions?.length) {
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
-    const userPermissions: string[] =
-      request.user?.permissions ?? [];
+    const userPermissions: string[] = request.user?.permissions ?? [];
     console.log('User Permissions:', userPermissions);
     console.log('requiredPermissions Permissions:', requiredPermissions);
     // User phải có tất cả permission mà endpoint yêu cầu.
