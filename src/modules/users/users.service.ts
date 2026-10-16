@@ -72,7 +72,16 @@ export class UsersService {
       passwordHash: passwordHash,
       roles,
     });
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return {
+      id: saved.id,
+      username: saved.username,
+      firstName: saved.firstName,
+      lastName: saved.lastName,
+      email: saved.email,
+      phone: saved.phone,
+      status: saved.status,
+    };
   }
   async findAll(query: FindUsersQueryDto) {
     const { q, page, limit, sort, roleId, status = UserStatus.ACTIVE } = query;
@@ -180,9 +189,9 @@ export class UsersService {
       where: {
         username,
       },
-      relations: {
-        roles: true,
-      },
+      // relations: {
+      //   roles: true,
+      // },
       select: {
         id: true,
         username: true,

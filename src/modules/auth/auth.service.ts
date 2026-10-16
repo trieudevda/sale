@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -8,129 +13,172 @@ import {
   RefreshTokenPayload,
   TokenType,
 } from './interface/token-payload.interface';
-import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { RevokedRefreshToken } from './entities/revoked-refresh-token.entity';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-type VerifiedRefreshTokenPayload = RefreshTokenPayload & {
-  exp: number;
-  iat: number;
+import { AuthSession } from './entities/auth-session.entity';
+import { AuthSettings } from './auth-settings';
+import { assertRefreshClaims } from './token-claims';
+type TokenSubject = {
+  id: string;
+  username: string;
+  authVersion: number;
 };
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
+  private dummyHash!: string;
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    @InjectRepository(RevokedRefreshToken)
-    private readonly revokeRefreshToken: Repository<RevokedRefreshToken>,
+    private readonly settings: AuthSettings,
+    @InjectRepository(AuthSession)
+    private readonly authSessionRepository: Repository<AuthSession>,
   ) {}
-  private createAccessToken(user: {
-    id: string;
-    username: string;
-    roles: { code: string }[];
-    authVersion: number;
-  }) {
-    const payload: AccessTokenPayload = {
+  async onModuleInit(): Promise<void> {
+    this.dummyHash = await this.usersService.hashPassword(randomUUID());
+  }
+  private async issueTokens(
+    user: TokenSubject,
+    sid: string,
+    jti: string,
+    sessionExp: number,
+  ) {
+    const now = Math.floor(Date.now() / 1000);
+
+    if (sessionExp <= now) {
+      throw new UnauthorizedException('Session expired');
+    }
+
+    const common = {
       sub: user.id,
+      sid,
       username: user.username,
-      // roles: user.roles.map((role) => role.code),
+      authVersion: user.authVersion,
+      iat: now,
+    };
+
+    const access: AccessTokenPayload = {
+      ...common,
       tokenType: TokenType.ACCESS,
-      authVersion: user.authVersion,
+      exp: Math.min(now + this.settings.accessTtl, sessionExp),
     };
 
-    return this.jwtService.signAsync(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-      expiresIn: this.configService.getOrThrow('JWT_ACCESS_EXPIRES_IN'),
-    });
-  }
-
-  private createRefreshToken(user: {
-    id: string;
-    username: string;
-    authVersion: number;
-  }) {
-    const payload: RefreshTokenPayload = {
-      sub: user.id,
-      username: user.username,
+    const refresh: RefreshTokenPayload = {
+      ...common,
       tokenType: TokenType.REFRESH,
-      authVersion: user.authVersion,
-      jti: randomUUID(),
+      jti,
+      exp: sessionExp,
     };
-    return this.jwtService.signAsync(payload, {
-      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.getOrThrow('JWT_REFRESH_EXPIRES_IN'),
-      algorithm: 'HS256',
-    });
-  }
-  async login(dto: LoginDto) {
-    const user = await this.usersService.findByUsername(dto.username);
-
-    if (!user) {
-      throw new UnauthorizedException('Username or password is incorrect');
-    }
-
-    const isPasswordValid = await this.usersService.verifyPassword(
-      user.passwordHash,
-      dto.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Username or password is incorrect');
-    }
-
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is not active');
-    }
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.createAccessToken(user),
-      this.createRefreshToken(user),
+      this.jwtService.signAsync(access, {
+        secret: this.settings.accessSecret,
+        algorithm: 'HS256',
+        issuer: this.settings.issuer,
+        audience: this.settings.accessAudience,
+      }),
+      this.jwtService.signAsync(refresh, {
+        secret: this.settings.refreshSecret,
+        algorithm: 'HS256',
+        issuer: this.settings.issuer,
+        audience: this.settings.refreshAudience,
+      }),
     ]);
 
     return {
       accessToken,
       refreshToken,
-      tokenType: 'Bearer',
+      tokenType: 'Bearer' as const,
     };
   }
-  async refresh({ refreshToken }: RefreshTokenDto) {
-    // let payload: RefreshTokenPayload;
-    const payload = await this.verifyRefreshToken({ refreshToken });
+  async login(dto: LoginDto) {
+    const user = await this.usersService.findByUsername(dto.username);
+    const valid = await this.usersService.verifyPassword(
+      user?.passwordHash ?? this.dummyHash,
+      dto.password,
+    );
+    if (!user || !valid || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Username or password is incorrect');
+    }
+    const sid = randomUUID();
+    const jti = randomUUID();
+    const sessionExp = Math.floor(Date.now() / 1000) + this.settings.refreshTtl;
+    const tokens = await this.issueTokens(user, sid, jti, sessionExp);
+
+    await this.authSessionRepository.insert({
+      id: sid,
+      userId: user.id,
+      currentRefreshJti: jti,
+      expiresAt: new Date(sessionExp * 1000),
+      revokedAt: null,
+    });
+
+    return tokens;
+  }
+  async refresh(dto: RefreshTokenDto) {
+    const payload = await this.verifyRefreshToken(dto.refreshToken);
 
     const user = await this.usersService.findAuthStateById(payload.sub);
 
-    if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is not active');
+    if (
+      !user ||
+      user.status !== UserStatus.ACTIVE ||
+      user.authVersion !== payload.authVersion
+    ) {
+      throw new UnauthorizedException('Session is no longer valid');
     }
+    const nextJti = randomUUID();
+    const tokens = await this.issueTokens(
+      user,
+      payload.sid,
+      nextJti,
+      payload.exp,
+    );
+    const result = await this.authSessionRepository
+      .createQueryBuilder()
+      .update(AuthSession)
+      .set({ currentRefreshJti: nextJti })
+      .where('id = :sid', { sid: payload.sid })
+      .andWhere('user_id = :uid', { uid: payload.sub })
+      .andWhere('current_refresh_jti = :jti', {
+        jti: payload.jti,
+      })
+      .andWhere('revoked_at IS NULL')
+      .andWhere('expires_at > :now', { now: new Date() })
+      .execute();
+    if (result.affected !== 1) {
+      await this.revokeSession(payload);
 
-    // Token đã bị thu hồi khi version không còn khớp.
-    if (payload.authVersion !== user.authVersion) {
-      throw new UnauthorizedException('Refresh token has been revoked');
-    }
-    const [accessToken, newRefreshToken] = await Promise.all([
-      this.createAccessToken(user),
-      this.createRefreshToken(user),
-    ]);
-    const consumed = await this.revokeToken(payload.jti, payload.exp);
+      this.logger.warn({
+        event: 'refresh_rejected',
+        userId: payload.sub,
+        sid: payload.sid,
+      });
 
-    if (!consumed) {
       throw new UnauthorizedException(
-        'Refresh token has been revoked or reused',
+        'Session expired, revoked, or token reused',
       );
     }
-    return {
-      accessToken,
-      refreshToken: newRefreshToken,
-      tokenType: 'Bearer',
-    };
-  }
 
-  async logout({ refreshToken }: RefreshTokenDto) {
-    const payload = await this.verifyRefreshToken({ refreshToken });
-    await this.revokeToken(payload.jti, payload.exp);
+    return tokens;
+  }
+  private async revokeSession(
+    payload: Pick<RefreshTokenPayload, 'sub' | 'sid'>,
+  ): Promise<void> {
+    await this.authSessionRepository
+      .createQueryBuilder()
+      .update(AuthSession)
+      .set({ revokedAt: new Date() })
+      .where('id = :sid', { sid: payload.sid })
+      .andWhere('user_id = :uid', { uid: payload.sub })
+      .andWhere('revoked_at IS NULL')
+      .execute();
+  }
+  async logout(dto: RefreshTokenDto) {
+    const payload = await this.verifyRefreshToken(dto.refreshToken);
+    await this.revokeSession(payload);
     return { message: 'Logged out.' };
   }
 
@@ -141,51 +189,23 @@ export class AuthService {
       message: 'All refresh tokens have been revoked',
     };
   }
-  private async verifyRefreshToken({
-    refreshToken,
-  }: RefreshTokenDto): Promise<VerifiedRefreshTokenPayload> {
+  private async verifyRefreshToken(
+    token: string,
+  ): Promise<RefreshTokenPayload> {
+    let payload: unknown;
     try {
-      const payload =
-        await this.jwtService.verifyAsync<VerifiedRefreshTokenPayload>(
-          refreshToken,
-          {
-            secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-            algorithms: ['HS256'],
-          },
-        );
-
-      if (
-        payload.tokenType !== TokenType.REFRESH ||
-        typeof payload.sub !== 'string' ||
-        typeof payload.jti !== 'string' ||
-        typeof payload.authVersion !== 'number' ||
-        typeof payload.exp !== 'number'
-      ) {
-        throw new Error('Invalid payload');
-      }
-
-      return payload;
+      payload = await this.jwtService.verifyAsync<object>(token, {
+        secret: this.settings.refreshSecret,
+        algorithms: ['HS256'],
+        issuer: this.settings.issuer,
+        audience: this.settings.refreshAudience,
+      });
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
-  }
-  private async revokeToken(jti: string, exp: number): Promise<boolean> {
-    try {
-      await this.revokeRefreshToken.insert({
-        jti,
-        expiresAt: new Date(exp * 1000),
-      });
 
-      return true;
-    } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        error.driverError.code === 'ER_DUP_ENTRY'
-      ) {
-        return false;
-      }
+    assertRefreshClaims(payload);
 
-      throw error;
-    }
+    return payload;
   }
 }
