@@ -111,13 +111,13 @@ export class UsersService {
           qb.where('users.username LIKE :keyword')
             .orWhere('users.email LIKE :keyword')
             .orWhere('users.phone LIKE :keyword')
-            .orWhere('users.firstName LIKE :keyword')
-            .orWhere('users.lastName LIKE :keyword')
+            .orWhere('users.first_name LIKE :keyword')
+            .orWhere('users.last_name LIKE :keyword')
             .orWhere(
               `CONCAT_WS(
               ' ',
-              users.firstName,
-              users.lastName
+              users.first_name,
+              users.last_name
             ) LIKE :keyword`,
             );
         }),
@@ -171,7 +171,10 @@ export class UsersService {
     queryBuilder.addOrderBy('users.id', 'DESC');
 
     queryBuilder.skip((page - 1) * limit).take(limit);
+    // const [sql, parameters] = queryBuilder.getQueryAndParameters();
 
+    // console.log('SQL:', sql);
+    // console.log('PARAMETERS:', parameters);
     const [users, total] = await queryBuilder.getManyAndCount();
 
     return {

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req, Header } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Header,
+  Get,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -6,7 +14,13 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 type AuthenticatedRequest = Request & {
-  user: { id: string };
+  user: {
+    id: string;
+    sid: string;
+    username: string;
+    roles: string[];
+    permissions: string[];
+  };
 };
 
 @UseGuards(ThrottlerGuard)
@@ -27,6 +41,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(JwtAuthGuard)
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
   }
@@ -35,5 +50,18 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   logoutAll(@Req() req: AuthenticatedRequest) {
     return this.authService.logoutAll(req.user.id);
+  }
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@Req() req: AuthenticatedRequest) {
+    const { id, sid, username, roles, permissions } = req.user;
+
+    return {
+      id,
+      sid,
+      username,
+      roles,
+      permissions,
+    };
   }
 }

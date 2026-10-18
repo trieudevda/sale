@@ -18,9 +18,10 @@ import { RequirePermissions } from '../authorization/decorators/permissions.deco
 import { PermissionsGuard } from '../authorization/guards/permissions.guard';
 import { UserPermission } from './permissions/user.permissions';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(ThrottlerGuard,JwtAuthGuard, PermissionsGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
