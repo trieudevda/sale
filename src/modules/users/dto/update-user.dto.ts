@@ -1,90 +1,76 @@
 import { PartialType } from '@nestjs/mapped-types';
 import CreateUserDto from './create-user.dto';
+import {
+  ArrayNotEmpty,
+  IsEmail, IsEnum,
+  IsNumberString,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { UserStatus } from '../enums/user-status.enum';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
-// import {
-//   ArrayNotEmpty,
-//   IsArray,
-//   IsEnum,
-//   IsInt,
-//   IsNotEmpty,
-//   IsNumberString,
-//   IsOptional,
-//   IsString,
-//   Matches,
-//   MaxLength,
-//   MinLength,
-// } from 'class-validator';
-// import { Transform } from 'class-transformer';
-// import { UserStatus } from '../enums/user-status.enum';
-// import { Role } from '../../authorization/entities/roles.entity';
-//
-// class CreateUserDto {
-//   @IsOptional()
-//   @Matches(/^[1-9]\d*$/, {
-//     message: 'ID phải là số nguyên dương',
-//   })
-//   @IsNumberString(
-//     { no_symbols: true },
-//     { message: 'ID phải là số nguyên hợp lệ' },
-//   )
-//   id?: string;
-//
-//   @IsString()
-//   @MaxLength(100)
-//   firstName?: string;
-//
-//   @IsString()
-//   @MaxLength(100)
-//   lastName?: string;
-//
-//   @IsOptional()
-//   @IsString()
-//   @Transform(({ value }) =>
-//     typeof value === 'string' && value.trim() === '' ? '' : value?.trim(),
-//   )
-//   email?: string;
-//
-//   @IsOptional()
-//   @Transform(({ value }) =>
-//     typeof value === 'string' && value.trim() === '' ? '' : value?.trim(),
-//   )
-//   @IsString()
-//   @MinLength(10)
-//   @MaxLength(20)
-//   phone?: string;
-//
-//   @IsOptional()
-//   @IsString()
-//   @MaxLength(255)
-//   address?: string;
-//
-//   @IsOptional()
-//   @MaxLength(100)
-//   @Transform(({ value }) =>
-//     typeof value === 'string' && value.trim() === '' ? '' : value?.trim(),
-//   )
-//   @IsString()
-//   username?: string;
-//
-//   @IsOptional()
-//   passwordHash?: string;
-//
-//   @IsOptional()
-//   @Transform(({ value }) =>
-//     typeof value === 'number' && value > 0 ? value : 0,
-//   )
-//   @IsInt()
-//   authVersion?: number;
-//
-//   @IsOptional()
-//   @ArrayNotEmpty()
-//   @IsNumberString({ no_symbols: true }, { each: true })
-//   roleIds?: string[];
-//
-//   @IsOptional()
-//   @IsEnum(UserStatus, { message: 'status không hợp lệ' })
-//   status?: UserStatus;
-// }
-//
-// export default CreateUserDto;
+export class UpdateUserDto extends PartialType(CreateUserDto) {
+
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  lastName?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+
+    const email = value.trim().toLowerCase();
+
+    return email === '' ? undefined : email;
+  })
+  @IsEmail({}, { message: 'Invalid email' })
+  @MaxLength(100)
+  email?: string;
+
+  @IsString()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const phone = value.trim();
+    return phone === '' ? undefined : phone;
+  })
+  // @MinLength(10)
+  // @MaxLength(20)
+  @Matches(/^\+?[0-9]{9,20}$/, {
+    message: 'Số điện thoại không hợp lệ',
+  })
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  address?: string;
+
+  @IsString()
+  @Length(10, 255)
+  password?: string;
+
+  @IsOptional()
+  @ArrayNotEmpty()
+  @IsNumberString({ no_symbols: true }, { each: true })
+  roleIds?: string[];
+
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+}
+
+export default CreateUserDto;

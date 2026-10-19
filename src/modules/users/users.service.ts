@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import CreateUserDto from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  FindOptionsWhere,
+  Not,
+  Repository,
+} from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -236,11 +242,60 @@ export class UsersService {
 
   findOne(id: string) {
     const user = this.userRepository.findOneBy({ id: id });
-    return `This action returns a #${id} user`;
+    return user ?? null;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const exists = await this.userRepository.findOne({ where: { id: id } });
+    if (!exists) {
+      throw new UnauthorizedException('User not found');
+    }
+    const { roleIds, password, ...userData } = updateUserDto;
+    delete userData.id;
+    const conflictConditions: FindOptionsWhere<User>[] = [];
+    if (userData.phone && userData.phone === exists.phone) {
+      conflictConditions.push({ phone: userData.phone, id: Not(id) });
+    }
+    if (userData.email && userData.email === exists.email) {
+      conflictConditions.push({ phone: userData.email, id: Not(id) });
+    }
+    const conflictingUsers = conflictConditions.length
+      ? await this.userRepository.find({
+          where: conflictConditions,
+          select: { phone: true, email: true, username: true },
+        })
+      : [];
+    const conflicts = new Set<string>();
+    for (const other of conflictingUsers) {
+      if (userData.phone && userData.phone === other.phone)
+        conflicts.add('phone');
+      if (userData.email && userData.email === other.email)
+        conflicts.add('email');
+      if (userData.username && userData.username === other.username)
+        conflicts.add('username');
+    }
+    if (conflicts.size) {
+      throw new ConflictException({
+        code: ErrorCode.USER_ALREADY_EXISTS,
+        message: 'User information already exists',
+        fields: [...new Set(conflicts)],
+      });
+    }
+    Object.assign(userData, conflicts);
+    if (password) exists.passwordHash = await this.hashPassword(password);
+    exists.roles = roleIds?.length
+      ? await this.roleService.findAllRole({ ids: roleIds })
+      : exists.roles;
+    const saved = await this.userRepository.save(exists);
+    return {
+      id: saved.id,
+      username: saved.username,
+      firstName: saved.firstName,
+      lastName: saved.lastName,
+      email: saved.email,
+      phone: saved.phone,
+      status: saved.status,
+    };
   }
 
   remove(id: number) {

@@ -56,8 +56,16 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @RequirePermissions(UserPermission.UPDATE)
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (!req.user.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Only admin can view user details');
+    }
+    return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
