@@ -1,5 +1,6 @@
 export const UserPermission = {
   FIND_ALL: 'user.findAll',
+  FIND_ONE: 'user.findOne',
   CREATE: 'user.create',
 
   READ: 'user.read',

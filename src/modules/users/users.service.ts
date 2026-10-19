@@ -171,10 +171,6 @@ export class UsersService {
     queryBuilder.addOrderBy('users.id', 'DESC');
 
     queryBuilder.skip((page - 1) * limit).take(limit);
-    // const [sql, parameters] = queryBuilder.getQueryAndParameters();
-
-    // console.log('SQL:', sql);
-    // console.log('PARAMETERS:', parameters);
     const [users, total] = await queryBuilder.getManyAndCount();
 
     return {
@@ -238,7 +234,8 @@ export class UsersService {
     }
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
+    const user = this.userRepository.findOneBy({ id: id });
     return `This action returns a #${id} user`;
   }
 

@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   Query,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import CreateUserDto from './dto/create-user.dto';
@@ -19,9 +21,16 @@ import { PermissionsGuard } from '../authorization/guards/permissions.guard';
 import { UserPermission } from './permissions/user.permissions';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import type { Request } from 'express';
 
+type AuthenticatedRequest = Request & {
+  user: {
+    id: string;
+    roles: string[];
+  };
+};
 @Controller('users')
-@UseGuards(ThrottlerGuard,JwtAuthGuard, PermissionsGuard)
+@UseGuards(ThrottlerGuard, JwtAuthGuard, PermissionsGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -38,8 +47,12 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @RequirePermissions(UserPermission.FIND_ONE)
+  findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    if (!req.user.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Only admin can view user details');
+    }
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')
