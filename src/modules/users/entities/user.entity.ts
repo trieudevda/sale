@@ -1,15 +1,19 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
   Index,
   JoinTable,
   ManyToMany,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserStatus } from '../enums/user-status.enum';
 import { Role } from '../../authorization/entities/roles.entity';
+import { v7 as uuidv7 } from 'uuid';
+import { uuidV7Transformer } from '../../../database/uuid-v7';
 
 @Entity('users')
 @Index('uq_users_phone', ['phone'], {
@@ -22,7 +26,12 @@ import { Role } from '../../authorization/entities/roles.entity';
   unique: true,
 })
 export class User {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
+  @PrimaryColumn({
+    name: 'id',
+    type: 'binary',
+    length: 16,
+    transformer: uuidV7Transformer,
+  })
   id!: string;
 
   @Column({ name: 'first_name', type: 'varchar', length: 100, nullable: true })
@@ -98,4 +107,11 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
+
+  @BeforeInsert()
+  generateId(): void {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 }

@@ -22,6 +22,7 @@ import { UserPermission } from './permissions/user.permissions';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
+import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -48,7 +49,10 @@ export class UsersController {
 
   @Get(':id')
   @RequirePermissions(UserPermission.FIND_ONE)
-  findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  findOne(
+    @Param('id', UuidV7Pipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     if (!req.user.roles.includes('ADMIN')) {
       throw new ForbiddenException('Only admin can view user details');
     }
@@ -58,7 +62,7 @@ export class UsersController {
   @Patch(':id')
   @RequirePermissions(UserPermission.UPDATE)
   update(
-    @Param('id') id: string,
+    @Param('id', UuidV7Pipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
     @Req() req: AuthenticatedRequest,
   ) {
@@ -69,7 +73,8 @@ export class UsersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @RequirePermissions(UserPermission.DELETE)
+  remove(@Param('id', UuidV7Pipe) id: string) {
+    return this.usersService.remove(id);
   }
 }

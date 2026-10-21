@@ -6,6 +6,7 @@ import type {
   BaseTokenPayload,
   RefreshTokenPayload,
 } from './interface/token-payload.interface';
+import { isUuidV7 } from '../../database/uuid-v7';
 
 type CheckedBase = BaseTokenPayload & Record<string, unknown>;
 
@@ -26,8 +27,7 @@ function isBase(value: unknown): value is CheckedBase {
   return (
     isRecord(value) &&
     typeof value.sub === 'string' &&
-    /^[1-9]\d{0,19}$/.test(value.sub) &&
-    BigInt(value.sub) <= 18446744073709551615n &&
+    isUuidV7(value.sub) &&
     typeof value.sid === 'string' &&
     isUUID(value.sid, '4') &&
     typeof value.username === 'string' &&

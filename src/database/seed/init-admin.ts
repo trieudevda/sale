@@ -2,6 +2,7 @@ import * as argon2 from 'argon2';
 import { DataSource } from 'typeorm';
 import { Role } from '../../modules/authorization/entities/roles.entity';
 import { User } from '../../modules/users/entities/user.entity';
+import { v7 as uuidv7 } from 'uuid';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -85,6 +86,7 @@ export async function seedBootstrapAdmin(
   });
 
   const admin = userRepository.create({
+    id: uuidv7(),
     username,
     phone,
     passwordHash,

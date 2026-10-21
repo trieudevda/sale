@@ -7,6 +7,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { uuidV7Transformer } from '../../../database/uuid-v7';
 
 @Entity('auth_sessions')
 @Index('ix_auth_sessions_user_id', ['userId'])
@@ -20,8 +21,9 @@ export class AuthSession {
 
   @Column({
     name: 'user_id',
-    type: 'bigint',
-    unsigned: true,
+    type: 'binary',
+    length: 16,
+    transformer: uuidV7Transformer,
   })
   userId!: string;
 

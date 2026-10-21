@@ -19,6 +19,8 @@ import { ErrorCode } from '../../common/exceptions/error-code';
 import { RoleService } from '../authorization/role.sevice';
 import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
+import { v7 as uuidv7 } from 'uuid';
+import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
 
 @Injectable()
 export class UsersService {
@@ -74,6 +76,7 @@ export class UsersService {
       : undefined;
     const passwordHash = await this.hashPassword(password);
     const user = this.userRepository.create({
+      id: uuidv7(),
       ...userData,
       passwordHash: passwordHash,
       roles,
@@ -298,7 +301,7 @@ export class UsersService {
     };
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} user`;
   }
 

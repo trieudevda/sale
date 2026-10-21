@@ -20,6 +20,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthSession } from './entities/auth-session.entity';
 import { AuthSettings } from './auth-settings';
 import { assertRefreshClaims } from './token-claims';
+import { uuidV7ToBuffer } from '../../database/uuid-v7';
 type TokenSubject = {
   id: string;
   username: string;
@@ -141,7 +142,7 @@ export class AuthService implements OnModuleInit {
       .update(AuthSession)
       .set({ currentRefreshJti: nextJti })
       .where('id = :sid', { sid: payload.sid })
-      .andWhere('user_id = :uid', { uid: payload.sub })
+      .andWhere('user_id = :uid', { uid: uuidV7ToBuffer(payload.sub) })
       .andWhere('current_refresh_jti = :jti', {
         jti: payload.jti,
       })
@@ -172,7 +173,7 @@ export class AuthService implements OnModuleInit {
       .update(AuthSession)
       .set({ revokedAt: new Date() })
       .where('id = :sid', { sid: payload.sid })
-      .andWhere('user_id = :uid', { uid: payload.sub })
+      .andWhere('user_id = :uid', { uid: uuidV7ToBuffer(payload.sub) })
       .andWhere('revoked_at IS NULL')
       .execute();
   }
