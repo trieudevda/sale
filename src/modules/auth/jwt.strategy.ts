@@ -49,12 +49,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Session is no longer valid');
     }
 
-    const roles = user.roles.map((role) => role.code);
+    const roles = user.roleAssignments.map(
+      (assignment) => assignment.role.code,
+    );
 
     const permissions = [
       ...new Set(
-        user.roles.flatMap((role) =>
-          role.permissions
+        user.roleAssignments.flatMap((assignments) =>
+          assignments.role.permissions
             .filter((permission) => permission.isActive)
             .map((permission) => permission.code),
         ),

@@ -21,6 +21,7 @@ import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { v7 as uuidv7 } from 'uuid';
 import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
+import { UserRole } from './entities/user-role.entity';
 
 @Injectable()
 export class UsersService {
@@ -75,13 +76,29 @@ export class UsersService {
       ? await this.roleService.findAllRole({ ids: roleIds })
       : undefined;
     const passwordHash = await this.hashPassword(password);
-    const user = this.userRepository.create({
-      id: uuidv7(),
-      ...userData,
-      passwordHash: passwordHash,
-      roles,
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const userRepository = manager.getRepository(User);
+      const userRoleRepository = manager.getRepository(UserRole);
+
+      const user = userRepository.create({
+        id: uuidv7(),
+        ...userData,
+        passwordHash,
+      });
+
+      const savedUser = await userRepository.save(user);
+
+      if (roles?.length) {
+        await userRoleRepository.insert(
+          roles.map((role) => ({
+            userId: savedUser.id,
+            roleId: role.id,
+          })),
+        );
+      }
+
+      return savedUser;
     });
-    const saved = await this.userRepository.save(user);
     return {
       id: saved.id,
       username: saved.username,
@@ -97,7 +114,9 @@ export class UsersService {
 
     const queryBuilder = this.userRepository
       .createQueryBuilder('users')
-      .leftJoinAndSelect('users.roles', 'roles')
+      // .leftJoinAndSelect('users.roles', 'roles')
+      .leftJoinAndSelect('users.roleAssignments', 'assignments')
+      .leftJoinAndSelect('assignments.role', 'roles')
       .select([
         'users.id',
         'users.firstName',
@@ -108,6 +127,8 @@ export class UsersService {
         'users.status',
         'users.createdAt',
         'users.updatedAt',
+        'assignments.userId',
+        'assignments.roleId',
         'roles.id',
         'roles.code',
         'roles.name',
@@ -136,11 +157,10 @@ export class UsersService {
     }
 
     if (roleId) {
-      // Join riêng để lọc nhưng vẫn trả về đầy đủ roles của user.
       queryBuilder.innerJoin(
-        'users.roles',
-        'filterRole',
-        'filterRole.id = :roleId',
+        'users.roleAssignments',
+        'filterAssignment',
+        'filterAssignment.roleId = :roleId',
         { roleId },
       );
     }
@@ -181,9 +201,20 @@ export class UsersService {
 
     queryBuilder.skip((page - 1) * limit).take(limit);
     const [users, total] = await queryBuilder.getManyAndCount();
+    const items = users.map((user) => {
+      const { roleAssignments, ...data } = user;
 
+      return {
+        ...data,
+        roles: roleAssignments.map((item) => ({
+          id: item.role.id,
+          code: item.role.code,
+          name: item.role.name,
+        })),
+      };
+    });
     return {
-      items: users,
+      items: items,
       pagination: {
         page,
         limit,
@@ -224,8 +255,10 @@ export class UsersService {
     return this.userRepository.findOne({
       where: { id },
       relations: {
-        roles: {
-          permissions: true,
+        roleAssignments: {
+          role: {
+            permissions: true,
+          },
         },
       },
     });
@@ -249,56 +282,81 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const exists = await this.userRepository.findOne({ where: { id: id } });
-    if (!exists) {
-      throw new UnauthorizedException('User not found');
-    }
-    const { roleIds, password, ...userData } = updateUserDto;
-    delete userData.id;
-    const conflictConditions: FindOptionsWhere<User>[] = [];
-    if (userData.phone && userData.phone === exists.phone) {
-      conflictConditions.push({ phone: userData.phone, id: Not(id) });
-    }
-    if (userData.email && userData.email === exists.email) {
-      conflictConditions.push({ phone: userData.email, id: Not(id) });
-    }
-    const conflictingUsers = conflictConditions.length
-      ? await this.userRepository.find({
-          where: conflictConditions,
-          select: { phone: true, email: true, username: true },
-        })
-      : [];
-    const conflicts = new Set<string>();
-    for (const other of conflictingUsers) {
-      if (userData.phone && userData.phone === other.phone)
-        conflicts.add('phone');
-      if (userData.email && userData.email === other.email)
-        conflicts.add('email');
-      if (userData.username && userData.username === other.username)
-        conflicts.add('username');
-    }
-    if (conflicts.size) {
-      throw new ConflictException({
-        code: ErrorCode.USER_ALREADY_EXISTS,
-        message: 'User information already exists',
-        fields: [...new Set(conflicts)],
-      });
-    }
-    Object.assign(userData, conflicts);
-    if (password) exists.passwordHash = await this.hashPassword(password);
-    exists.roles = roleIds?.length
-      ? await this.roleService.findAllRole({ ids: roleIds })
-      : exists.roles;
-    const saved = await this.userRepository.save(exists);
-    return {
-      id: saved.id,
-      username: saved.username,
-      firstName: saved.firstName,
-      lastName: saved.lastName,
-      email: saved.email,
-      phone: saved.phone,
-      status: saved.status,
-    };
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const userRepository = manager.getRepository(User);
+      const userRoleRepository = manager.getRepository(UserRole);
+      const exists = await userRepository.findOne({ where: { id: id } });
+      if (!exists) {
+        throw new UnauthorizedException('User not found');
+      }
+      const { roleIds, password, ...userData } = updateUserDto;
+      delete userData.id;
+      const conflictConditions: FindOptionsWhere<User>[] = [];
+      if (userData.phone && userData.phone === exists.phone) {
+        conflictConditions.push({ phone: userData.phone, id: Not(id) });
+      }
+      if (userData.email && userData.email === exists.email) {
+        conflictConditions.push({ email: userData.email, id: Not(id) });
+      }
+      const conflictingUsers = conflictConditions.length
+        ? await this.userRepository.find({
+            where: conflictConditions,
+            select: { phone: true, email: true, username: true },
+          })
+        : [];
+      const conflicts = new Set<string>();
+      for (const other of conflictingUsers) {
+        if (userData.phone && userData.phone === other.phone)
+          conflicts.add('phone');
+        if (userData.email && userData.email === other.email)
+          conflicts.add('email');
+        if (userData.username && userData.username === other.username)
+          conflicts.add('username');
+      }
+      if (conflicts.size) {
+        throw new ConflictException({
+          code: ErrorCode.USER_ALREADY_EXISTS,
+          message: 'User information already exists',
+          fields: [...new Set(conflicts)],
+        });
+      }
+      // Object.assign(userData, conflicts);
+      if (password) exists.passwordHash = await this.hashPassword(password);
+
+      const user = await userRepository.save(exists);
+
+      const savedUser = await userRepository.save(user);
+      if (roleIds !== undefined) {
+        const roles = roleIds.length
+          ? await this.roleService.findAllRole({ ids: roleIds })
+          : [];
+
+        const assignments = manager.getRepository(UserRole);
+
+        await assignments.delete({ userId: id });
+
+        if (roles.length) {
+          await assignments.insert(
+            roles.map((role) => ({
+              userId: id,
+              roleId: role.id,
+            })),
+          );
+        }
+
+        await manager.getRepository(User).increment({ id }, 'authVersion', 1);
+      }
+
+      return {
+        id: savedUser.id,
+        username: savedUser.username,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        email: savedUser.email,
+        phone: savedUser.phone,
+        status: savedUser.status,
+      };
+    });
   }
 
   remove(id: string) {

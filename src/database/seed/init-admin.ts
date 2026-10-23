@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { Role } from '../../modules/authorization/entities/roles.entity';
 import { User } from '../../modules/users/entities/user.entity';
 import { v7 as uuidv7 } from 'uuid';
+import { UserRole } from '../../modules/users/entities/user-role.entity';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -48,9 +49,6 @@ export async function seedBootstrapAdmin(
 
   const existingByUsername = await userRepository.findOne({
     where: { username },
-    relations: {
-      roles: true,
-    },
   });
 
   if (existingByUsername) {
@@ -59,17 +57,17 @@ export async function seedBootstrapAdmin(
         'Bootstrap admin username already belongs to another phone',
       );
     }
+    await dataSource
+      .getRepository(UserRole)
+      .createQueryBuilder()
+      .insert()
+      .values({
+        userId: existingByUsername.id,
+        roleId: adminRole.id,
+      })
+      .orIgnore()
+      .execute();
 
-    const hasAdminRole = existingByUsername.roles.some(
-      (role) => role.id === adminRole.id,
-    );
-
-    if (!hasAdminRole) {
-      existingByUsername.roles.push(adminRole);
-      await userRepository.save(existingByUsername);
-    }
-
-    // Không cập nhật lại password ở những lần chạy sau.
     return;
   }
 
@@ -84,14 +82,19 @@ export async function seedBootstrapAdmin(
   const passwordHash = await argon2.hash(password, {
     type: argon2.argon2id,
   });
+  await dataSource.transaction(async (manager) => {
+    const admin = manager.getRepository(User).create({
+      id: uuidv7(),
+      username,
+      phone,
+      passwordHash,
+    });
 
-  const admin = userRepository.create({
-    id: uuidv7(),
-    username,
-    phone,
-    passwordHash,
-    roles: [adminRole],
+    await manager.getRepository(User).save(admin);
+
+    await manager.getRepository(UserRole).insert({
+      userId: admin.id,
+      roleId: adminRole.id,
+    });
   });
-
-  await userRepository.save(admin);
 }

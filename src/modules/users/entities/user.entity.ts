@@ -6,6 +6,7 @@ import {
   Index,
   JoinTable,
   ManyToMany,
+  OneToMany,
   PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -14,6 +15,7 @@ import { UserStatus } from '../enums/user-status.enum';
 import { Role } from '../../authorization/entities/roles.entity';
 import { v7 as uuidv7 } from 'uuid';
 import { uuidV7Transformer } from '../../../database/uuid-v7';
+import { UserRole } from './user-role.entity';
 
 @Entity('users')
 @Index('uq_users_phone', ['phone'], {
@@ -85,19 +87,21 @@ export class User {
   })
   authVersion!: number;
 
-  @ManyToMany(() => Role, (role) => role.users)
-  @JoinTable({
-    name: 'user_roles',
-    joinColumn: {
-      name: 'user_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'role_id',
-      referencedColumnName: 'id',
-    },
-  })
-  roles!: Role[];
+  // @ManyToMany(() => Role, (role) => role.users)
+  // @JoinTable({
+  //   name: 'user_roles',
+  //   joinColumn: {
+  //     name: 'user_id',
+  //     referencedColumnName: 'id',
+  //   },
+  //   inverseJoinColumn: {
+  //     name: 'role_id',
+  //     referencedColumnName: 'id',
+  //   },
+  // })
+  // roles!: Role[];
+  @OneToMany(() => UserRole, (userRole) => userRole.user)
+  roleAssignments!: UserRole[];
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   status!: UserStatus;
