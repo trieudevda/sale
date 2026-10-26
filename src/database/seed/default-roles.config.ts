@@ -4,6 +4,7 @@ export const DEFAULT_ROLES = [
     name: 'Quản trị viên',
     grantAllPermissions: true,
     permissions: [],
+    level: 1,
   },
 
   // {

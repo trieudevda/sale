@@ -7,6 +7,11 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
+interface AuthenticatedRequest {
+  user?: {
+    permissions: string[];
+  };
+}
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -17,25 +22,22 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredPermissions?.length) {
+    if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (!request.user) {
+      throw new ForbiddenException('Access denied');
+    }
     const userPermissions: string[] = request.user?.permissions ?? [];
-    console.log('User Permissions:', userPermissions);
-    console.log('requiredPermissions Permissions:', requiredPermissions);
     // User phải có tất cả permission mà endpoint yêu cầu.
     const isAllowed = requiredPermissions.every((permission) =>
       userPermissions.includes(permission),
     );
 
     if (!isAllowed) {
-      throw new ForbiddenException({
-        code: 'FORBIDDEN',
-        message: 'You do not have the required permission',
-        requiredPermissions,
-      });
+      throw new ForbiddenException('Insufficient permissions');
     }
 
     return true;

@@ -1,17 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import CreateUserDto from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import {
-  Brackets,
-  DataSource,
-  FindOptionsWhere,
-  Not,
-  Repository,
-} from 'typeorm';
+import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -20,8 +16,8 @@ import { RoleService } from '../authorization/role.sevice';
 import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { v7 as uuidv7 } from 'uuid';
-import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
-import { UserRole } from './entities/user-role.entity';
+import { UpdateUserProfileDto } from './dto/update-user.dto';
+import { uuidV7ToBuffer } from '../../database/uuid-v7';
 
 @Injectable()
 export class UsersService {
@@ -31,7 +27,17 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly roleService: RoleService,
   ) {}
-  async create(createUserDto: CreateUserDto) {
+  async create(
+    createUserDto: CreateUserDto,
+    actor: { id: string; roles: string[] },
+  ) {
+    if (!actor.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Only ADMIN can create users currently');
+    }
+
+    if (createUserDto.roleIds?.length) {
+      throw new ForbiddenException('Direct role assignment is disabled');
+    }
     const { roleIds, password, ...userData } = createUserDto;
     const whereUser: FindOptionsWhere<User>[] = [];
     if (userData.phone) {
@@ -72,33 +78,18 @@ export class UsersService {
         fields: [...new Set(conflicts)],
       });
     }
-    const roles = roleIds?.length
-      ? await this.roleService.findAllRole({ ids: roleIds })
-      : undefined;
+
     const passwordHash = await this.hashPassword(password);
-    const saved = await this.dataSource.transaction(async (manager) => {
-      const userRepository = manager.getRepository(User);
-      const userRoleRepository = manager.getRepository(UserRole);
 
-      const user = userRepository.create({
-        id: uuidv7(),
-        ...userData,
-        passwordHash,
-      });
-
-      const savedUser = await userRepository.save(user);
-
-      if (roles?.length) {
-        await userRoleRepository.insert(
-          roles.map((role) => ({
-            userId: savedUser.id,
-            roleId: role.id,
-          })),
-        );
-      }
-
-      return savedUser;
+    const user = this.userRepository.create({
+      id: uuidv7(),
+      ...userData,
+      passwordHash,
+      status: UserStatus.PENDING,
     });
+
+    const saved = await this.userRepository.save(user);
+
     return {
       id: saved.id,
       username: saved.username,
@@ -109,7 +100,7 @@ export class UsersService {
       status: saved.status,
     };
   }
-  async findAll(query: FindUsersQueryDto) {
+  async findAll(query: FindUsersQueryDto, actorId: string) {
     const { q, page, limit, sort, roleId, status = UserStatus.ACTIVE } = query;
 
     const queryBuilder = this.userRepository
@@ -133,7 +124,10 @@ export class UsersService {
         'roles.code',
         'roles.name',
       ])
-      .where('users.status = :status', { status });
+      .where('users.status = :status', { status })
+      .andWhere('users.id = :actorId', {
+        actorId: uuidV7ToBuffer(actorId),
+      });
 
     if (q) {
       queryBuilder.andWhere(
@@ -276,87 +270,130 @@ export class UsersService {
     }
   }
 
-  findOne(id: string) {
-    const user = this.userRepository.findOneBy({ id: id });
-    return user ?? null;
+  async findOne(id: string, actorId: string) {
+    if (id !== actorId) {
+      throw new NotFoundException('User not found');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    const saved = await this.dataSource.transaction(async (manager) => {
-      const userRepository = manager.getRepository(User);
-      const userRoleRepository = manager.getRepository(UserRole);
-      const exists = await userRepository.findOne({ where: { id: id } });
-      if (!exists) {
-        throw new UnauthorizedException('User not found');
-      }
-      const { roleIds, password, ...userData } = updateUserDto;
-      delete userData.id;
-      const conflictConditions: FindOptionsWhere<User>[] = [];
-      if (userData.phone && userData.phone === exists.phone) {
-        conflictConditions.push({ phone: userData.phone, id: Not(id) });
-      }
-      if (userData.email && userData.email === exists.email) {
-        conflictConditions.push({ email: userData.email, id: Not(id) });
-      }
-      const conflictingUsers = conflictConditions.length
-        ? await this.userRepository.find({
-            where: conflictConditions,
-            select: { phone: true, email: true, username: true },
-          })
-        : [];
-      const conflicts = new Set<string>();
-      for (const other of conflictingUsers) {
-        if (userData.phone && userData.phone === other.phone)
-          conflicts.add('phone');
-        if (userData.email && userData.email === other.email)
-          conflicts.add('email');
-        if (userData.username && userData.username === other.username)
-          conflicts.add('username');
-      }
-      if (conflicts.size) {
-        throw new ConflictException({
-          code: ErrorCode.USER_ALREADY_EXISTS,
-          message: 'User information already exists',
-          fields: [...new Set(conflicts)],
-        });
-      }
-      // Object.assign(userData, conflicts);
-      if (password) exists.passwordHash = await this.hashPassword(password);
-
-      const user = await userRepository.save(exists);
-
-      const savedUser = await userRepository.save(user);
-      if (roleIds !== undefined) {
-        const roles = roleIds.length
-          ? await this.roleService.findAllRole({ ids: roleIds })
-          : [];
-
-        const assignments = manager.getRepository(UserRole);
-
-        await assignments.delete({ userId: id });
-
-        if (roles.length) {
-          await assignments.insert(
-            roles.map((role) => ({
-              userId: id,
-              roleId: role.id,
-            })),
-          );
-        }
-
-        await manager.getRepository(User).increment({ id }, 'authVersion', 1);
-      }
-
-      return {
-        id: savedUser.id,
-        username: savedUser.username,
-        firstName: savedUser.firstName,
-        lastName: savedUser.lastName,
-        email: savedUser.email,
-        phone: savedUser.phone,
-        status: savedUser.status,
-      };
+  async update(actorId: string, targetId: string, dto: UpdateUserProfileDto) {
+    if (actorId !== targetId) {
+      throw new NotFoundException('User not found');
+    }
+    const user = await this.userRepository.findOneBy({
+      id: actorId,
     });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.firstName !== undefined) {
+      user.firstName = dto.firstName;
+    }
+
+    if (dto.lastName !== undefined) {
+      user.lastName = dto.lastName;
+    }
+
+    if (dto.address !== undefined) {
+      user.address = dto.address;
+    }
+
+    if (dto.email !== undefined && dto.email !== user.email) {
+      user.email = dto.email;
+      user.emailVerifiedAt = null;
+    }
+
+    if (dto.phone !== undefined && dto.phone !== user.phone) {
+      user.phone = dto.phone;
+      user.phoneVerifiedAt = null;
+    }
+
+    const saved = await this.userRepository.save(user);
+
+    return {
+      id: saved.id,
+      username: saved.username,
+      firstName: saved.firstName,
+      lastName: saved.lastName,
+      email: saved.email,
+      phone: saved.phone,
+      status: saved.status,
+    };
+  }
+
+  async changeOwnPassword(
+    actorId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('New password must be different');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: actorId },
+      select: {
+        id: true,
+        passwordHash: true,
+        authVersion: true,
+        status: true,
+      },
+    });
+
+    if (
+      !user ||
+      user.status !== UserStatus.ACTIVE ||
+      !(await this.verifyPassword(user.passwordHash, currentPassword))
+    ) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const newHash = await this.hashPassword(newPassword);
+
+    const result = await this.userRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({
+        passwordHash: newHash,
+        authVersion: () => 'auth_version + 1',
+      })
+      .where('id = :id', {
+        id: uuidV7ToBuffer(actorId),
+      })
+      .andWhere('auth_version = :version', {
+        version: user.authVersion,
+      })
+      .andWhere('status = :status', {
+        status: UserStatus.ACTIVE,
+      })
+      .execute();
+
+    if (result.affected !== 1) {
+      throw new ConflictException('Account changed, retry the request');
+    }
   }
 
   remove(id: string) {

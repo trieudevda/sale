@@ -57,6 +57,7 @@ export async function seedAuthorization(dataSource: DataSource): Promise<void> {
         code: config.code,
         name: config.name,
         source: RoleSource.SYSTEM,
+        level: 1,
       });
     } else {
       role.name = config.name;

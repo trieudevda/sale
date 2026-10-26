@@ -13,6 +13,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
+import { ChangePasswordDto } from './dto/change-password.dto';
 type AuthenticatedRequest = Request & {
   user: {
     id: string;
@@ -36,14 +37,23 @@ export class AuthController {
   }
   @Post('refresh')
   @Header('Cache-Control', 'no-store')
+  @Throttle({
+    default: {
+      limit: 15,
+      ttl: 60_000,
+    },
+  })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto);
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  logout(@Body() dto: RefreshTokenDto) {
-    return this.authService.logout(dto);
+  logout(@Body() dto: RefreshTokenDto, @Req() req: AuthenticatedRequest) {
+    return this.authService.logout(dto, {
+      id: req.user.id,
+      sid: req.user.sid,
+    });
   }
 
   @Post('logout-all')
@@ -63,5 +73,20 @@ export class AuthController {
       roles,
       permissions,
     };
+  }
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+    },
+  })
+  @Header('Cache-Control', 'no-store')
+  changePassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(req.user.id, dto);
   }
 }

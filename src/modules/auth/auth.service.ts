@@ -21,6 +21,7 @@ import { AuthSession } from './entities/auth-session.entity';
 import { AuthSettings } from './auth-settings';
 import { assertRefreshClaims } from './token-claims';
 import { uuidV7ToBuffer } from '../../database/uuid-v7';
+import { ChangePasswordDto } from './dto/change-password.dto';
 type TokenSubject = {
   id: string;
   username: string;
@@ -177,8 +178,13 @@ export class AuthService implements OnModuleInit {
       .andWhere('revoked_at IS NULL')
       .execute();
   }
-  async logout(dto: RefreshTokenDto) {
+  async logout(dto: RefreshTokenDto, actor: { id: string; sid: string }) {
     const payload = await this.verifyRefreshToken(dto.refreshToken);
+    if (payload.sub !== actor.id || payload.sid !== actor.sid) {
+      throw new UnauthorizedException(
+        'Refresh token does not belong to current session',
+      );
+    }
     await this.revokeSession(payload);
     return { message: 'Logged out.' };
   }
@@ -208,5 +214,16 @@ export class AuthService implements OnModuleInit {
     assertRefreshClaims(payload);
 
     return payload;
+  }
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    await this.usersService.changeOwnPassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+
+    return {
+      message: 'Password changed. Please sign in again.',
+    };
   }
 }

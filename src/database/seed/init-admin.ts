@@ -57,16 +57,14 @@ export async function seedBootstrapAdmin(
         'Bootstrap admin username already belongs to another phone',
       );
     }
-    await dataSource
-      .getRepository(UserRole)
-      .createQueryBuilder()
-      .insert()
-      .values({
-        userId: existingByUsername.id,
-        roleId: adminRole.id,
-      })
-      .orIgnore()
-      .execute();
+    const alreadyAdmin = await dataSource.getRepository(UserRole).existsBy({
+      userId: existingByUsername.id,
+      roleId: adminRole.id,
+    });
+
+    if (!alreadyAdmin) {
+      throw new Error('Existing account requires manual ADMIN verification');
+    }
 
     return;
   }

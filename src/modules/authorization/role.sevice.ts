@@ -13,13 +13,14 @@ export class RoleService {
   ) {}
   async findAllRole(options: FindAllRoleOptions = {}) {
     const { ids, relations = {} } = options;
-    if (ids?.length) {
+    if (ids !== undefined) {
       if (ids.length === 0) {
         return [];
       }
       const uniqueIds = [...new Set(ids)];
       const roles = await this.roleRepository.find({
         where: { id: In(uniqueIds) },
+        relations,
       });
       const foundRoleIds = new Set(roles.map((role) => role.id));
       const invalidRoleIds = uniqueIds.filter((id) => !foundRoleIds.has(id));

@@ -13,8 +13,6 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import CreateUserDto from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { Role } from '../authorization/entities/roles.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../authorization/decorators/permissions.decorator';
 import { PermissionsGuard } from '../authorization/guards/permissions.guard';
@@ -23,6 +21,7 @@ import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
+import { UpdateUserProfileDto } from './dto/update-user.dto';
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -37,14 +36,20 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(UserPermission.FIND_ALL)
-  findAll(@Query() query: FindUsersQueryDto) {
-    return this.usersService.findAll(query);
+  findAll(@Query() query: FindUsersQueryDto, @Req() req: AuthenticatedRequest) {
+    return this.usersService.findAll(query, req.user.id);
   }
 
   @Post()
   @RequirePermissions(UserPermission.CREATE)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.usersService.create(createUserDto, {
+      id: req.user.id,
+      roles: req.user.roles,
+    });
   }
 
   @Get(':id')
@@ -53,23 +58,20 @@ export class UsersController {
     @Param('id', UuidV7Pipe) id: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    if (!req.user.roles.includes('ADMIN')) {
-      throw new ForbiddenException('Only admin can view user details');
-    }
-    return this.usersService.findOne(id);
+    return this.usersService.findOne(id, req.user.id);
   }
 
   @Patch(':id')
   @RequirePermissions(UserPermission.UPDATE)
   update(
     @Param('id', UuidV7Pipe) id: string,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto: UpdateUserProfileDto,
     @Req() req: AuthenticatedRequest,
   ) {
     if (!req.user.roles.includes('ADMIN')) {
       throw new ForbiddenException('Only admin can view user details');
     }
-    return this.usersService.update(id, updateUserDto);
+    return this.usersService.update(req.user.id, id, updateUserDto);
   }
 
   @Delete(':id')

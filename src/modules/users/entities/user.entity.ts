@@ -4,15 +4,11 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserStatus } from '../enums/user-status.enum';
-import { Role } from '../../authorization/entities/roles.entity';
 import { v7 as uuidv7 } from 'uuid';
 import { uuidV7Transformer } from '../../../database/uuid-v7';
 import { UserRole } from './user-role.entity';
@@ -87,19 +83,6 @@ export class User {
   })
   authVersion!: number;
 
-  // @ManyToMany(() => Role, (role) => role.users)
-  // @JoinTable({
-  //   name: 'user_roles',
-  //   joinColumn: {
-  //     name: 'user_id',
-  //     referencedColumnName: 'id',
-  //   },
-  //   inverseJoinColumn: {
-  //     name: 'role_id',
-  //     referencedColumnName: 'id',
-  //   },
-  // })
-  // roles!: Role[];
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   roleAssignments!: UserRole[];
 
