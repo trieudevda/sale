@@ -23,7 +23,7 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
-      return true;
+      throw new ForbiddenException('Endpoint permission is not configured');
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();

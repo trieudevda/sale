@@ -35,13 +35,13 @@ class CreateUserDto {
   email?: string;
 
   @IsString()
-  @Transform(({ value }) => {
-    if (typeof value !== 'string') return value;
-    const phone = value.trim();
-    return phone === '' ? undefined : phone;
-  })
+  // @Transform(({ value }) => {
+  //   if (typeof value !== 'string') return value;
+  //   const phone = value.trim();
+  //   return phone === '' ? undefined : phone;
+  // })
   // @MinLength(10)
-  // @MaxLength(20)
+  @MaxLength(20)
   @Matches(/^\+?[0-9]{9,20}$/, {
     message: 'Số điện thoại không hợp lệ',
   })
@@ -53,20 +53,18 @@ class CreateUserDto {
   address?: string;
 
   @IsString()
-  @MaxLength(100)
-  @Transform(({ value }) =>
-    typeof value === 'string' && value.trim() === '' ? '' : value?.trim(),
-  )
+  @Length(1, 100)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   username!: string;
 
   @IsString()
   @Length(10, 255)
   password!: string;
 
-  @IsOptional()
-  @ArrayNotEmpty()
-  @IsNumberString({ no_symbols: true }, { each: true })
-  roleIds?: string[];
+  // @IsOptional()
+  // @ArrayNotEmpty()
+  // @IsNumberString({ no_symbols: true }, { each: true })
+  // roleIds?: string[];
 }
 
 export default CreateUserDto;

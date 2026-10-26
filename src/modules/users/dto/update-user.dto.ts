@@ -87,4 +87,5 @@ export class UpdateUserProfileDto extends PartialType(
     'phone',
     'address',
   ] as const),
+  { skipNullProperties: false },
 ) {}

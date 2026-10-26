@@ -35,10 +35,10 @@ export class UsersService {
       throw new ForbiddenException('Only ADMIN can create users currently');
     }
 
-    if (createUserDto.roleIds?.length) {
-      throw new ForbiddenException('Direct role assignment is disabled');
-    }
-    const { roleIds, password, ...userData } = createUserDto;
+    // if (createUserDto.roleIds?.length) {
+    //   throw new ForbiddenException('Direct role assignment is disabled');
+    // }
+    const { password, ...userData } = createUserDto;
     const whereUser: FindOptionsWhere<User>[] = [];
     if (userData.phone) {
       whereUser.push({ phone: userData.phone });
@@ -301,47 +301,55 @@ export class UsersService {
     if (actorId !== targetId) {
       throw new NotFoundException('User not found');
     }
-    const user = await this.userRepository.findOneBy({
-      id: actorId,
+    return this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(User);
+
+      const user = await repository.findOne({
+        where: { id: actorId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.status !== UserStatus.ACTIVE) {
+        throw new ForbiddenException('Account is not active');
+      }
+
+      const patch: Partial<User> = {};
+
+      if (dto.firstName !== undefined) patch.firstName = dto.firstName;
+      if (dto.lastName !== undefined) patch.lastName = dto.lastName;
+      if (dto.address !== undefined) patch.address = dto.address;
+
+      if (dto.email !== undefined && dto.email !== user.email) {
+        patch.email = dto.email;
+        patch.emailVerifiedAt = null;
+      }
+
+      if (dto.phone !== undefined && dto.phone !== user.phone) {
+        patch.phone = dto.phone;
+        patch.phoneVerifiedAt = null;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await repository.update({ id: actorId }, patch);
+      }
+
+      Object.assign(user, patch);
+
+      return {
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        address: user.address,
+        email: user.email,
+        phone: user.phone,
+        status: user.status,
+      };
     });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (dto.firstName !== undefined) {
-      user.firstName = dto.firstName;
-    }
-
-    if (dto.lastName !== undefined) {
-      user.lastName = dto.lastName;
-    }
-
-    if (dto.address !== undefined) {
-      user.address = dto.address;
-    }
-
-    if (dto.email !== undefined && dto.email !== user.email) {
-      user.email = dto.email;
-      user.emailVerifiedAt = null;
-    }
-
-    if (dto.phone !== undefined && dto.phone !== user.phone) {
-      user.phone = dto.phone;
-      user.phoneVerifiedAt = null;
-    }
-
-    const saved = await this.userRepository.save(user);
-
-    return {
-      id: saved.id,
-      username: saved.username,
-      firstName: saved.firstName,
-      lastName: saved.lastName,
-      email: saved.email,
-      phone: saved.phone,
-      status: saved.status,
-    };
   }
 
   async changeOwnPassword(
