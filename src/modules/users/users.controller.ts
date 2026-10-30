@@ -9,7 +9,6 @@ import {
   UseGuards,
   Query,
   Req,
-  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import CreateUserDto from './dto/create-user.dto';
@@ -68,9 +67,6 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserProfileDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    if (!req.user.roles.includes('ADMIN')) {
-      throw new ForbiddenException('Only admin can view user details');
-    }
     return this.usersService.update(req.user.id, id, updateUserDto);
   }
 

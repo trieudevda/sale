@@ -83,6 +83,15 @@ export class User {
   })
   authVersion!: number;
 
+  @Column({
+    name: 'parent_id',
+    type: 'binary',
+    length: 16,
+    nullable: true,
+    transformer: uuidV7Transformer,
+  })
+  parentId!: string | null;
+
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   roleAssignments!: UserRole[];
 

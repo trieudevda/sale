@@ -63,6 +63,7 @@ export async function seedAuthorization(dataSource: DataSource): Promise<void> {
       role.name = config.name;
       role.source = RoleSource.SYSTEM;
     }
+    role.level = config.level;
 
     role.permissions = config.grantAllPermissions
       ? await permissionRepository.find({

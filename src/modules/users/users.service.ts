@@ -12,7 +12,6 @@ import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { ErrorCode } from '../../common/exceptions/error-code';
-import { RoleService } from '../authorization/role.sevice';
 import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { v7 as uuidv7 } from 'uuid';
@@ -25,7 +24,6 @@ export class UsersService {
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly roleService: RoleService,
   ) {}
   async create(
     createUserDto: CreateUserDto,
