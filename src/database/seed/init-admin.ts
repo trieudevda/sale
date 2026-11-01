@@ -4,6 +4,7 @@ import { Role } from '../../modules/authorization/entities/roles.entity';
 import { User } from '../../modules/users/entities/user.entity';
 import { v7 as uuidv7 } from 'uuid';
 import { UserRole } from '../../modules/users/entities/user-role.entity';
+import { UserClosure } from '../../modules/users/entities/user-closure.entity';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -89,6 +90,12 @@ export async function seedBootstrapAdmin(
     });
 
     await manager.getRepository(User).save(admin);
+
+    await manager.getRepository(UserClosure).insert({
+      ancestorId: admin.id,
+      descendantId: admin.id,
+      depth: 0,
+    });
 
     await manager.getRepository(UserRole).insert({
       userId: admin.id,

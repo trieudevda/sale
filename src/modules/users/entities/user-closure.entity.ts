@@ -1,7 +1,8 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { uuidV7Transformer } from '../../../database/uuid-v7';
 
 @Entity('user_closure')
+@Index('idx_user_closure_descendant', ['descendantId', 'ancestorId'])
 export class UserClosure {
   @PrimaryColumn({
     name: 'ancestor_id',

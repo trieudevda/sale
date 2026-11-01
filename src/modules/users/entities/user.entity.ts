@@ -101,6 +101,15 @@ export class User {
   @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
+  @Column({
+    name: 'created_by',
+    type: 'binary',
+    length: 16,
+    nullable: true,
+    transformer: uuidV7Transformer,
+  })
+  createdBy!: string | null;
+
   @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 

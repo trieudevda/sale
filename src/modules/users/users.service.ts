@@ -7,7 +7,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import CreateUserDto from './dto/create-user.dto';
-import { Brackets, DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  FindOptionsWhere,
+  In,
+  Repository,
+} from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -17,6 +23,10 @@ import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { v7 as uuidv7 } from 'uuid';
 import { UpdateUserProfileDto } from './dto/update-user.dto';
 import { uuidV7ToBuffer } from '../../database/uuid-v7';
+import { UserClosure } from './entities/user-closure.entity';
+import { Role } from '../authorization/entities/roles.entity';
+import { UserRole } from './entities/user-role.entity';
+import { UserPermission } from './permissions/user.permissions';
 
 @Injectable()
 export class UsersService {
@@ -25,81 +35,86 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
-  async create(
-    createUserDto: CreateUserDto,
-    actor: { id: string; roles: string[] },
-  ) {
-    if (!actor.roles.includes('ADMIN')) {
-      throw new ForbiddenException('Only ADMIN can create users currently');
-    }
-
-    // if (createUserDto.roleIds?.length) {
-    //   throw new ForbiddenException('Direct role assignment is disabled');
-    // }
+  async create(createUserDto: CreateUserDto, actorId: string) {
     const { password, ...userData } = createUserDto;
-    const whereUser: FindOptionsWhere<User>[] = [];
-    if (userData.phone) {
-      whereUser.push({ phone: userData.phone });
-    }
-    if (userData.email) {
-      whereUser.push({ email: userData.email });
-    }
-    if (userData.username) {
-      whereUser.push({ username: userData.username });
-    }
-    const exists = whereUser.length
-      ? await this.userRepository.find({
-          where: whereUser,
-          select: {
-            phone: true,
-            email: true,
-            username: true,
-          },
-        })
-      : [];
-    const conflicts: string[] = [];
-    for (const user of exists) {
-      if (userData.phone && userData.phone === user.phone) {
-        conflicts.push('phone');
-      }
-      if (userData.email && userData.email === user.email) {
-        conflicts.push('email');
-      }
-      if (userData.username && userData.username === user.username) {
-        conflicts.push('username');
-      }
-    }
-    if (conflicts.length > 0) {
-      throw new ConflictException({
-        code: ErrorCode.USER_ALREADY_EXISTS,
-        message: 'User information already exists',
-        fields: [...new Set(conflicts)],
-      });
-    }
-
     const passwordHash = await this.hashPassword(password);
+    return this.dataSource.transaction(async (manager) => {
+      const users = manager.getRepository(User);
+      const closures = manager.getRepository(UserClosure);
+      const userRoles = manager.getRepository(UserRole);
 
-    const user = this.userRepository.create({
-      id: uuidv7(),
-      ...userData,
-      passwordHash,
-      status: UserStatus.PENDING,
+      const actor = await users.findOne({
+        where: { id: actorId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!actor || actor.status !== UserStatus.ACTIVE) {
+        throw new ForbiddenException('Inactive account');
+      }
+      const assignments = await userRoles.find({
+        where: { userId: actorId },
+        relations: {
+          role: {
+            permissions: true,
+          },
+        },
+      });
+      const canCreate = assignments.some((item) =>
+        item.role.permissions.some(
+          (permission) =>
+            permission.isActive && permission.code === UserPermission.CREATE,
+        ),
+      );
+      if (!canCreate) {
+        throw new ForbiddenException('Cannot create users');
+      }
+      const ancestors = await closures.find({
+        where: { descendantId: actorId },
+      });
+
+      if (
+        !ancestors.some(
+          (path) => path.ancestorId === actorId && path.depth === 0,
+        )
+      ) {
+        throw new ConflictException('Hierarchy is not initialized');
+      }
+      const child = users.create({
+        id: uuidv7(),
+        ...userData,
+        passwordHash,
+        status: UserStatus.PENDING,
+        parentId: actorId,
+        createdBy: actorId,
+      });
+
+      const saved = await users.save(child);
+      await closures.insert([
+        ...ancestors.map((path) => ({
+          ancestorId: path.ancestorId,
+          descendantId: saved.id,
+          depth: path.depth + 1,
+        })),
+        {
+          ancestorId: saved.id,
+          descendantId: saved.id,
+          depth: 0,
+        },
+      ]);
+      return {
+        id: saved.id,
+        username: saved.username,
+        firstName: saved.firstName,
+        lastName: saved.lastName,
+        email: saved.email,
+        phone: saved.phone,
+        status: saved.status,
+        parentId: saved.parentId,
+        createdBy: saved.createdBy,
+      };
     });
-
-    const saved = await this.userRepository.save(user);
-
-    return {
-      id: saved.id,
-      username: saved.username,
-      firstName: saved.firstName,
-      lastName: saved.lastName,
-      email: saved.email,
-      phone: saved.phone,
-      status: saved.status,
-    };
   }
   async findAll(query: FindUsersQueryDto, actorId: string) {
-    const { q, page, limit, sort, roleId, status = UserStatus.ACTIVE } = query;
+    const { q, page, limit, sort, roleId, status } = query;
 
     const queryBuilder = this.userRepository
       .createQueryBuilder('users')
@@ -122,10 +137,21 @@ export class UsersService {
         'roles.code',
         'roles.name',
       ])
-      .where('users.status = :status', { status })
-      .andWhere('users.id = :actorId', {
-        actorId: uuidV7ToBuffer(actorId),
-      });
+      .where('1 = 1');
+    if (status !== undefined) {
+      queryBuilder.where('users.status = :status', { status });
+    }
+    queryBuilder.where('users.status = :status', { status }).andWhere(
+      `EXISTS (
+                SELECT 1
+                FROM user_closure uc
+                WHERE uc.ancestor_id = :scopeActorId
+                  AND uc.descendant_id = users.id
+              )`,
+      {
+        scopeActorId: uuidV7ToBuffer(actorId),
+      },
+    );
 
     if (q) {
       queryBuilder.andWhere(
@@ -273,26 +299,57 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id },
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
+    const user = await this.userRepository
+      .createQueryBuilder('users')
+      .innerJoinAndSelect('users.roleAssignments', 'roleAssignments')
+      .where('users.id = :id', { id: uuidV7ToBuffer(id) })
+      // .where('users.id = :id', { id: uuidV7ToBuffer(id) })
+      .andWhere(
+        `EXISTS (
+      SELECT 1
+      FROM user_closure uc
+      WHERE uc.ancestor_id = :scopeActorId
+        AND uc.descendant_id = users.id
+    )`,
+        {
+          scopeActorId: uuidV7ToBuffer(actorId),
+        },
+      )
+      .getOne();
+    // const user = await this.userRepository.findOne({
+    //   where: { id },
+    //   select: {
+    //     id: true,
+    //     username: true,
+    //     firstName: true,
+    //     lastName: true,
+    //     email: true,
+    //     phone: true,
+    //     status: true,
+    //     createdAt: true,
+    //     updatedAt: true,
+    //   },
+    // });
+console.log('user', user);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return {
+      id: user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      roleAssignments: user.roleAssignments.map((item) => ({
+        roleId: item.roleId,
+        userId: item.userId,
+        user: item.user || undefined,
+        role: item.role || undefined
+      })),
+    };
   }
 
   async update(actorId: string, targetId: string, dto: UpdateUserProfileDto) {
@@ -414,5 +471,151 @@ export class UsersService {
 
   async verifyPassword(hash: string, password: string): Promise<boolean> {
     return argon2.verify(hash, password);
+  }
+
+  async activateChild(actorId: string, targetId: string, roleIds: string[]) {
+    if (actorId === targetId) {
+      throw new ForbiddenException('Cannot activate yourself');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const users = manager.getRepository(User);
+      const assignments = manager.getRepository(UserRole);
+
+      const actor = await users.findOne({
+        where: { id: actorId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      const target = await users.findOne({
+        where: { id: targetId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!actor || actor.status !== UserStatus.ACTIVE) {
+        throw new ForbiddenException('Inactive account');
+      }
+
+      if (
+        !target ||
+        target.parentId !== actorId ||
+        target.createdBy !== actorId
+      ) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (target.status !== UserStatus.PENDING) {
+        throw new ConflictException('User is not pending');
+      }
+
+      const directlyManaged = await manager
+        .getRepository(UserClosure)
+        .existsBy({
+          ancestorId: actorId,
+          descendantId: targetId,
+          depth: 1,
+        });
+
+      if (!directlyManaged) {
+        throw new ConflictException('Invalid hierarchy');
+      }
+
+      const ownAssignments = await assignments.find({
+        where: { userId: actorId },
+        relations: { role: { permissions: true } },
+      });
+
+      const ownRoles = ownAssignments.map((x) => x.role);
+
+      const ownPermissions = new Set(
+        ownRoles.flatMap((role) =>
+          role.permissions
+            .filter((permission) => permission.isActive)
+            .map((permission) => permission.code),
+        ),
+      );
+
+      if (
+        !ownPermissions.has(UserPermission.ROLE_ASSIGN) ||
+        !ownPermissions.has(UserPermission.ACTIVATE)
+      ) {
+        throw new ForbiddenException('Insufficient permissions');
+      }
+
+      const actorLevel = Math.max(0, ...ownRoles.map((role) => role.level));
+
+      const uniqueIds = [...new Set(roleIds)];
+
+      if (!uniqueIds.length || uniqueIds.length > 5) {
+        throw new BadRequestException('Invalid role list');
+      }
+
+      const targetRoles = await manager.getRepository(Role).find({
+        where: { id: In(uniqueIds) },
+        relations: { permissions: true },
+      });
+
+      if (targetRoles.length !== uniqueIds.length) {
+        throw new BadRequestException('Role not found');
+      }
+
+      // Level càng cao thì Role càng cao.
+      if (
+        !Number.isInteger(actorLevel) ||
+        targetRoles.some(
+          (role) =>
+            !Number.isInteger(role.level) ||
+            role.level < 1 ||
+            role.level >= actorLevel,
+        )
+      ) {
+        throw new ForbiddenException('Cannot assign equal or higher roles');
+      }
+
+      if (
+        targetRoles.some((role) =>
+          role.permissions.some(
+            (permission) =>
+              permission.isActive && !ownPermissions.has(permission.code),
+          ),
+        )
+      ) {
+        throw new ForbiddenException('Cannot delegate additional permissions');
+      }
+
+      await assignments.delete({ userId: targetId });
+
+      await assignments.insert(
+        targetRoles.map((role) => ({
+          userId: targetId,
+          roleId: role.id,
+        })),
+      );
+
+      const result = await users
+        .createQueryBuilder()
+        .update(User)
+        .set({
+          status: UserStatus.ACTIVE,
+          authVersion: () => 'auth_version + 1',
+        })
+        .where('id = :targetId', {
+          targetId: uuidV7ToBuffer(targetId),
+        })
+        .andWhere('status = :pending', {
+          pending: UserStatus.PENDING,
+        })
+        .execute();
+
+      if (result.affected !== 1) {
+        throw new ConflictException('User state changed');
+      }
+
+      return {
+        id: targetId,
+        status: UserStatus.ACTIVE,
+        roles: targetRoles.map((role) => role.code),
+      };
+    });
   }
 }

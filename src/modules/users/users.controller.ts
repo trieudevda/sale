@@ -21,6 +21,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { UuidV7Pipe } from '../../common/pipes/uuid-v7.pipe';
 import { UpdateUserProfileDto } from './dto/update-user.dto';
+import { ActivateUserDto } from './dto/activate-user.dto';
 
 type AuthenticatedRequest = Request & {
   user: {
@@ -45,10 +46,7 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.usersService.create(createUserDto, {
-      id: req.user.id,
-      roles: req.user.roles,
-    });
+    return this.usersService.create(createUserDto, req.user.id);
   }
 
   @Get(':id')
@@ -74,5 +72,15 @@ export class UsersController {
   @RequirePermissions(UserPermission.DELETE)
   remove(@Param('id', UuidV7Pipe) id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Post(':id/activate')
+  @RequirePermissions(UserPermission.ROLE_ASSIGN, UserPermission.ACTIVATE)
+  activate(
+    @Param('id', UuidV7Pipe) id: string,
+    @Body() dto: ActivateUserDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.usersService.activateChild(req.user.id, id, dto.roleIds);
   }
 }
