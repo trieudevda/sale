@@ -10,14 +10,12 @@ import CreateUserDto from './dto/create-user.dto';
 import {
   Brackets,
   DataSource,
-  FindOptionsWhere,
   In,
   Repository,
 } from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { ErrorCode } from '../../common/exceptions/error-code';
 import { UserStatus } from './enums/user-status.enum';
 import { FindUsersQueryDto } from './dto/find-user-query.dto';
 import { v7 as uuidv7 } from 'uuid';
@@ -42,7 +40,6 @@ export class UsersService {
       const users = manager.getRepository(User);
       const closures = manager.getRepository(UserClosure);
       const userRoles = manager.getRepository(UserRole);
-
       const actor = await users.findOne({
         where: { id: actorId },
         lock: { mode: 'pessimistic_write' },
@@ -70,7 +67,6 @@ export class UsersService {
       const ancestors = await closures.find({
         where: { descendantId: actorId },
       });
-
       if (
         !ancestors.some(
           (path) => path.ancestorId === actorId && path.depth === 0,
@@ -118,7 +114,6 @@ export class UsersService {
 
     const queryBuilder = this.userRepository
       .createQueryBuilder('users')
-      // .leftJoinAndSelect('users.roles', 'roles')
       .leftJoinAndSelect('users.roleAssignments', 'assignments')
       .leftJoinAndSelect('assignments.role', 'roles')
       .select([
@@ -141,7 +136,8 @@ export class UsersService {
     if (status !== undefined) {
       queryBuilder.where('users.status = :status', { status });
     }
-    queryBuilder.where('users.status = :status', { status }).andWhere(
+    else{
+      queryBuilder.where('users.status = :status', { status }).andWhere(
       `EXISTS (
                 SELECT 1
                 FROM user_closure uc
@@ -152,6 +148,7 @@ export class UsersService {
         scopeActorId: uuidV7ToBuffer(actorId),
       },
     );
+    }
 
     if (q) {
       queryBuilder.andWhere(
@@ -303,12 +300,11 @@ export class UsersService {
       .createQueryBuilder('users')
       .innerJoinAndSelect('users.roleAssignments', 'roleAssignments')
       .where('users.id = :id', { id: uuidV7ToBuffer(id) })
-      // .where('users.id = :id', { id: uuidV7ToBuffer(id) })
       .andWhere(
         `EXISTS (
       SELECT 1
       FROM user_closure uc
-      WHERE uc.ancestor_id = :scopeActorId
++      WHERE uc.ancestor_id = :scopeActorId
         AND uc.descendant_id = users.id
     )`,
         {
@@ -316,21 +312,6 @@ export class UsersService {
         },
       )
       .getOne();
-    // const user = await this.userRepository.findOne({
-    //   where: { id },
-    //   select: {
-    //     id: true,
-    //     username: true,
-    //     firstName: true,
-    //     lastName: true,
-    //     email: true,
-    //     phone: true,
-    //     status: true,
-    //     createdAt: true,
-    //     updatedAt: true,
-    //   },
-    // });
-console.log('user', user);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -347,7 +328,7 @@ console.log('user', user);
         roleId: item.roleId,
         userId: item.userId,
         user: item.user || undefined,
-        role: item.role || undefined
+        role: item.role || undefined,
       })),
     };
   }
