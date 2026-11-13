@@ -32,7 +32,7 @@ export class UsersService {
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
   async create(createUserDto: CreateUserDto, actorId: string) {
     const { password, ...userData } = createUserDto;
     const passwordHash = await this.hashPassword(password);
@@ -133,21 +133,19 @@ export class UsersService {
         'roles.name',
       ])
       .where('1 = 1');
-    if (status !== undefined) {
-      queryBuilder.where('users.status = :status', { status });
-    }
-    else{
-      queryBuilder.where('users.status = :status', { status }).andWhere(
+    queryBuilder.andWhere(
       `EXISTS (
-                SELECT 1
-                FROM user_closure uc
-                WHERE uc.ancestor_id = :scopeActorId
-                  AND uc.descendant_id = users.id
-              )`,
+    SELECT 1
+    FROM user_closure uc
+    WHERE uc.ancestor_id = :scopeActorId
+      AND uc.descendant_id = users.id
+  )`,
       {
         scopeActorId: uuidV7ToBuffer(actorId),
       },
     );
+    if (status !== undefined) {
+      queryBuilder.where('users.status = :status', { status });
     }
 
     if (q) {
