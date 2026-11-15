@@ -145,7 +145,7 @@ export class UsersService {
       },
     );
     if (status !== undefined) {
-      queryBuilder.where('users.status = :status', { status });
+      queryBuilder.andWhere('users.status = :status', { status });
     }
 
     if (q) {
