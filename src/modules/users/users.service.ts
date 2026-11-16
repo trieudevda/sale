@@ -12,6 +12,7 @@ import {
   DataSource,
   In,
   Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
 import * as argon2 from 'argon2';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -109,6 +110,81 @@ export class UsersService {
       };
     });
   }
+  sortUI(sort: FindUsersQueryDto['sort'], queryBuilder: SelectQueryBuilder<User>) {
+    switch (sort) {
+      case 'oldest':
+        queryBuilder.orderBy('users.createdAt', 'ASC');
+        break;
+
+      case 'username_asc':
+        queryBuilder.orderBy('users.username', 'ASC');
+        break;
+
+      case 'username_desc':
+        queryBuilder.orderBy('users.username', 'DESC');
+        break;
+
+      case 'name_asc':
+        queryBuilder
+          .orderBy('users.firstName', 'ASC')
+          .addOrderBy('users.lastName', 'ASC');
+        break;
+
+      case 'name_desc':
+        queryBuilder
+          .orderBy('users.firstName', 'DESC')
+          .addOrderBy('users.lastName', 'DESC');
+        break;
+      case 'email_asc':
+        queryBuilder.orderBy('users.email', 'ASC');
+        break;
+
+      case 'email_desc':
+        queryBuilder.orderBy('users.email', 'DESC');
+        break;
+
+      case 'phone_asc':
+        queryBuilder.orderBy('users.phone', 'ASC');
+        break;
+
+      case 'phone_desc':
+        queryBuilder.orderBy('users.phone', 'DESC');
+        break;
+      case 'createdAt_asc':
+        queryBuilder.orderBy('users.createdAt', 'ASC');
+        break;
+
+      case 'createdAt_desc':
+        queryBuilder.orderBy('users.createdAt', 'DESC');
+        break;
+
+      case 'updatedAt_asc':
+        queryBuilder.orderBy('users.updatedAt', 'ASC');
+        break;
+
+      case 'updatedAt_desc':
+        queryBuilder.orderBy('users.updatedAt', 'DESC');
+        break;
+      case 'status_asc':
+        queryBuilder.orderBy('users.status', 'ASC');
+        break;
+
+      case 'status_desc':
+        queryBuilder.orderBy('users.status', 'DESC');
+        break;
+      case 'createdBy_asc':
+        queryBuilder.orderBy('users.createdBy', 'ASC');
+        break;
+      case 'createdBy_desc':
+        queryBuilder.orderBy('users.createdBy', 'DESC');
+        break;
+
+      case 'newest':
+      default:
+        queryBuilder.orderBy('users.createdAt', 'DESC');
+        break;
+    }
+  }
   async findAll(query: FindUsersQueryDto, actorId: string) {
     const { q, page, limit, sort, roleId, status } = query;
 
@@ -122,28 +198,30 @@ export class UsersService {
         'users.lastName',
         'users.email',
         'users.phone',
-        'users.username',
+        'users.address',
+        // 'users.username',
+        // 'users.parentId',
         'users.status',
         'users.createdAt',
         'users.updatedAt',
+        'users.createdBy',
         'assignments.userId',
         'assignments.roleId',
         'roles.id',
         'roles.code',
         'roles.name',
       ])
-      .where('1 = 1');
-    queryBuilder.andWhere(
-      `EXISTS (
+      .where(
+        `EXISTS (
     SELECT 1
     FROM user_closure uc
     WHERE uc.ancestor_id = :scopeActorId
       AND uc.descendant_id = users.id
   )`,
-      {
-        scopeActorId: uuidV7ToBuffer(actorId),
-      },
-    );
+        {
+          scopeActorId: uuidV7ToBuffer(actorId),
+        },
+      );
     if (status !== undefined) {
       queryBuilder.andWhere('users.status = :status', { status });
     }
@@ -177,37 +255,7 @@ export class UsersService {
         { roleId },
       );
     }
-
-    switch (sort) {
-      case 'oldest':
-        queryBuilder.orderBy('users.createdAt', 'ASC');
-        break;
-
-      case 'username_asc':
-        queryBuilder.orderBy('users.username', 'ASC');
-        break;
-
-      case 'username_desc':
-        queryBuilder.orderBy('users.username', 'DESC');
-        break;
-
-      case 'name_asc':
-        queryBuilder
-          .orderBy('users.firstName', 'ASC')
-          .addOrderBy('users.lastName', 'ASC');
-        break;
-
-      case 'name_desc':
-        queryBuilder
-          .orderBy('users.firstName', 'DESC')
-          .addOrderBy('users.lastName', 'DESC');
-        break;
-
-      case 'newest':
-      default:
-        queryBuilder.orderBy('users.createdAt', 'DESC');
-        break;
-    }
+    this.sortUI(sort, queryBuilder);
 
     // Giữ thứ tự ổn định nếu nhiều user có cùng giá trị sort.
     queryBuilder.addOrderBy('users.id', 'DESC');
